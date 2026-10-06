@@ -1,6 +1,6 @@
 # Feature Flag Platform — Design Plan
 
-Status: Draft v2 · Target: ~40 Spring Boot microservices on GKE, 6 environments (incl. prod)
+Status: Draft v3 · Target: ~40 Spring Boot microservices on GKE, 6 environments (incl. prod)
 
 ## 0. Decisions so far
 
@@ -8,6 +8,9 @@ Status: Draft v2 · Target: ~40 Spring Boot microservices on GKE, 6 environments
 |---|---|
 | Runtime | GKE (Workload Identity Federation for GKE) |
 | Scale | ~40 services, 6 environments |
+| Projects | Separate **non-prod** and **prod** GCP projects; each environment is a **namespace** inside one of them (see §4.1) |
+| App version | Set by GitOps/Terraform at deploy time → injected into pods as `APP_VERSION` (see §5.1) |
+| Distribution | Starter is pulled in through the **shared core module**, so all 40 services get it from one change |
 | Store | **Firestore** (Native mode) |
 | Targeting | Environment, **region**, **app (service)** and **app version**, plus tenant/user later |
 | Other languages | Not now, but the snapshot format and evaluation rules must be language-neutral |
@@ -70,15 +73,41 @@ Spring Cloud Config with `@RefreshScope` avoids restarts but has no targeting, r
 
 Key property: **flag-service is not in the data plane.** Pods depend only on Firestore and GCS, which are both managed and highly available. If flag-service is down, only editing is blocked.
 
-### 4.1 Why two Firestore databases
+### 4.1 Placement across projects and namespaces
 
-Firestore IAM works per database, not per collection. If pods had read access to the admin database, every service could read all flags, rules, segments and the audit log for every environment.
+Firestore IAM works per database, not per collection. If pods had read access to the admin database, every service could read all flags, rules, segments and the audit log for every environment. So there are two kinds of database:
 
 - `flags-admin`: the source of truth. Only flag-service's service account has access.
-- `flags-runtime`: holds only the tiny `heads/{env}` documents. All workloads get `roles/datastore.viewer` on this database only (IAM condition on the database resource name). A head doc reveals only a version number and a path, which is harmless.
-- The actual flag content lives in **per-environment GCS buckets**. Each env's workloads get `storage.objectViewer` on their own bucket only, so a dev pod cannot read prod flags.
+- `flags-runtime`: holds only the tiny `heads/{env}` documents. Workloads get `roles/datastore.viewer` on this database only (IAM condition on the database resource name). A head doc reveals only a version number and a path, which is harmless.
+- The actual flag content lives in **one GCS bucket per environment**.
 
-Put the prod bucket (and ideally prod's `flags-runtime` database) in the prod project if your projects are split by environment.
+Where each piece lives:
+
+| Resource | Non-prod project | Prod project |
+|---|---|---|
+| flag-service + `flags-admin` DB | – | ✔ (one admin plane for all envs; it writes to non-prod across projects) |
+| `flags-runtime` DB | ✔ heads for non-prod envs | ✔ heads for prod-project envs |
+| Snapshot buckets | `…-flags-{env}` for each non-prod env | `…-flags-{env}` for each prod-project env |
+
+Rules:
+- **Prod pods depend only on resources in the prod project.** A non-prod outage or misconfiguration can't affect prod.
+- flag-service sits in the prod project because that is the most locked-down place, and it is the only thing that can write to prod. Its service account gets write access to the non-prod buckets and the non-prod `flags-runtime` database. A small dedicated `tools`/`flags-admin` project is a cleaner alternative if your org allows creating one.
+- One admin plane means one UI, one audit log, and "promote qa → stage → prod" across projects.
+
+**Namespace isolation.** Several environments share a project (and probably a cluster), so the boundary between them is the **Kubernetes namespace**. With Workload Identity Federation for GKE, we grant bucket access directly to *every pod in a namespace*, with no Google service accounts to create:
+
+```hcl
+resource "google_storage_bucket_iam_member" "flags_reader" {
+  bucket = google_storage_bucket.flags["qa"].name
+  role   = "roles/storage.objectViewer"
+  member = "principalSet://iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/${var.project_id}.svc.id.goog/namespace/qa"
+}
+```
+
+So pods in the `dev` namespace can read only the dev bucket, even inside the same project and cluster.
+
+> ⚠ Check: this only works if pods use Workload Identity. If any node pool still runs pods as the **node's default service account** (`GKE_METADATA` not enabled on the node pool), all namespaces on that node share one identity and the isolation is lost. Verify with
+> `gcloud container node-pools describe POOL --cluster CLUSTER --region REGION --format='value(config.workloadMetadataConfig.mode)'` → must be `GKE_METADATA`.
 
 ### 4.2 Change flow
 
@@ -107,10 +136,27 @@ The starter fills these in automatically at startup:
 | Attribute | Source |
 |---|---|
 | `app` | `spring.application.name` |
-| `appVersion` | `BuildProperties` (Spring Boot build-info) or the image tag via env var |
+| `appVersion` | `APP_VERSION` env var set by GitOps/Terraform (fallback: Spring Boot `BuildProperties`, then `unknown`) |
 | `region`, `zone` | GKE metadata server / node topology labels via downward API |
 | `cluster`, `namespace`, `pod` | Downward API env vars |
 | `env` | Starter config (`flags.env`) |
+
+**App version from GitOps.** The version is decided in your Terraform, so we pass it straight into the pod rather than relying on the build. In the shared deployment module, add one env var (and the standard label, so dashboards can use it too):
+
+```hcl
+# in the Terraform module that renders each service's Deployment
+env {
+  name  = "APP_VERSION"
+  value = var.app_version          # the same value already used for the image tag
+}
+env {
+  name  = "FLAGS_ENV"
+  value = var.environment          # dev | qa | ... | prod
+}
+labels = { "app.kubernetes.io/version" = var.app_version }
+```
+
+Because this lives in the shared deployment module, all 40 services get it without per-service changes. If the version doesn't look like semver (e.g. a git SHA), rules use `EQ/IN` instead of `SEMVER_*`, and the UI shows which versions are currently reporting in (from usage reports).
 
 Per-request attributes (`tenantId`, `userId`, …) come from a servlet/WebFlux filter reading the JWT or headers into OpenFeature's transaction context. They are optional today, but the model supports them.
 
@@ -170,14 +216,24 @@ usage/{env}_{app}_{flagKey}  lastEvaluatedAt, count   (from SDK usage reports)
 
 ### 6.1 Usage
 
+**Rollout through the core module.** The starter is its own artifact (`flags-spring-boot-starter`), and the shared core module declares it as a dependency. When services upgrade core, they get flags. The defaults live in the starter, so services need **no config of their own**:
+
 ```yaml
-# application.yml (env usually injected via ConfigMap per namespace)
+# defaults shipped inside the starter; overridable per service
 flags:
-  env: ${FLAGS_ENV}          # dev | qa | perf | stage | preprod | prod (your 6)
-  bucket: yourco-flags-${FLAGS_ENV}
+  enabled: true
+  env: ${FLAGS_ENV:}                          # from the Deployment (Terraform)
+  project: ${FLAGS_PROJECT:${GOOGLE_CLOUD_PROJECT:}}
+  bucket: ${FLAGS_BUCKET:yourco-flags-${FLAGS_ENV}}
   runtime-database: flags-runtime
   poll-interval: 120s
+  startup-timeout: 5s
 ```
+
+- If `FLAGS_ENV` is missing (local runs, services not yet redeployed with the new Terraform), the starter logs a warning and uses code defaults plus an optional `flags-local.yaml`. **Pulling in core never breaks a service.**
+- **Dependency risk:** the Firestore and GCS clients bring gRPC, protobuf and Guava. Pin them with `com.google.cloud:libraries-bom` in core's dependency management, and run all 40 services' builds/tests against the new core before release. This is the main integration risk.
+
+Usage in a service:
 
 ```java
 @Service
@@ -214,7 +270,7 @@ During a change, a request going A → B → C may briefly see different version
 
 ## 7. Admin UI & workflow
 
-- Served by flag-service behind **IAP**. Google Groups map to roles per env: `viewer`, `editor`, `approver`.
+- Login: **IAP (Identity-Aware Proxy)** in front of flag-service's GKE Ingress/Gateway, with groups mapping to roles per env: `viewer`, `editor`, `approver`. This is pending confirmation (§7.1).
 - Approval required for `RELEASE` flag changes in prod (configurable per env via `environments/{env}.requiresApproval`). `OPS` kill switches can be flipped immediately by on-call, but are still audited.
 - Features:
   - Flag list with filters: owner, app, env, stale.
@@ -224,6 +280,38 @@ During a change, a request going A → B → C may briefly see different version
   - One-click rollback to any snapshot version.
 - Scheduled ramps (5% → 25% → 100%) via Cloud Scheduler → flag-service.
 - Audit stream: a Firestore trigger (Eventarc) on `auditLog` → Pub/Sub → Slack `#flag-changes` and BigQuery.
+
+### 7.1 Choosing admin login (IAP or not)
+
+IAP is a Google Cloud feature that puts a Google sign-in in front of a web app, so flag-service never handles passwords. Whether it fits depends on how your engineers sign in to the GCP console today. Ask your platform/cloud admin, or check:
+
+```bash
+# 1. Which account type do people use? Company Google accounts (Workspace / Cloud Identity)
+#    show up as members like user:alice@yourco.com
+gcloud projects get-iam-policy PROD_PROJECT --format='value(bindings.members)' | tr ';' '\n' | sort -u | head
+
+# 2. Do Google Groups exist? (needs org-level read access)
+gcloud organizations list
+gcloud identity groups search --organization=ORG_ID \
+  --labels="cloudidentity.googleapis.com/groups.discussion_forum" --page-size=20
+
+# 3. Is IAP already used for any internal tool? (existing pattern = easy approval)
+kubectl get backendconfig -A -o yaml | grep -i -A3 iap         # GKE Ingress style
+kubectl get gcpbackendpolicy -A -o yaml | grep -i -A3 iap       # Gateway API style
+gcloud iap web get-iam-policy --project=PROD_PROJECT 2>/dev/null
+
+# 4. Federated from Okta / Azure AD / other? (Workforce Identity Federation)
+gcloud iam workforce-pools list --location=global --organization=ORG_ID
+```
+
+| What you find | Login choice |
+|---|---|
+| Company Google accounts + groups (1–2 show results) | **IAP + Google Groups**. Simplest; no auth code in flag-service. |
+| IAP already used elsewhere (3) | Same; reuse that team's setup and approval path. |
+| Okta / Azure AD via workforce federation (4) | IAP still works with workforce identity; groups come from the IdP. |
+| None of the above / unsure | **Spring Security OIDC** in flag-service against your corporate IdP (Okta/Azure AD/Keycloak), roles from IdP group claims. Works anywhere, just more code. |
+
+Either way, flag-service's authorization layer (who may edit which env) is the same; only the login front-door differs. Phase 1 can start before this is decided.
 
 ## 8. Failure modes
 
@@ -246,8 +334,8 @@ During a change, a request going A → B → C may briefly see different version
 
 | Phase | Scope | Outcome |
 |---|---|---|
-| **0. Spike (1 wk)** | Benchmark Unleash or flagd on one service. Agree naming (`<domain>.<feature>`), lifecycle policy and env names. Terraform for the Firestore DBs, buckets and IAM. | Go/no-go; infra ready |
-| **1. MVP (3–4 wks)** | flag-service + `flags-admin`; boolean flags; env on/off + **region / app / appVersion** rules; snapshot publisher + reconciler; starter with listener + poll + OpenFeature provider + health/metrics; audit log; minimal UI behind IAP. Pilot on 2 services in non-prod. | Toggle without restart, < 5 s |
+| **0. Spike (1 wk)** | Benchmark Unleash or flagd on one service. Agree naming (`<domain>.<feature>`), lifecycle policy and env names. Terraform: Firestore DBs + buckets in both projects, namespace-level IAM, `APP_VERSION`/`FLAGS_ENV` in the shared deployment module. Check Workload Identity on node pools; decide admin login (§7.1). | Go/no-go; infra ready |
+| **1. MVP (3–4 wks)** | flag-service + `flags-admin`; boolean flags; env on/off + **region / app / appVersion** rules; snapshot publisher + reconciler; starter with listener + poll + OpenFeature provider + health/metrics; audit log; minimal UI behind IAP. Starter added to core module (off-by-default if `FLAGS_ENV` unset); pilot on 2 services in non-prod. | Toggle without restart, < 5 s |
 | **2. Rollouts (2 wks)** | Percentage rollouts, segments, string/number/JSON flags, "evaluate as", rollback, promote-across-envs, conformance test vectors. | Gradual, safe rollouts |
 | **3. Governance (2 wks)** | Prod approvals, scheduled ramps, Slack/BigQuery audit stream, usage reporting, stale-flag alerts + CI check, `@FeatureToggle`, JUnit extension. | Safe at 40-service scale |
 | **4. Adoption (ongoing)** | Add the starter to the service template; migrate existing restart-based toggles service by service; runbook. | All 40 services onboarded |
@@ -262,7 +350,8 @@ During a change, a request going A → B → C may briefly see different version
 
 ## 12. Remaining open questions
 
-1. Are the 6 environments in separate GCP projects, or one project with separate namespaces/clusters? (This decides where the buckets and `flags-runtime` live.)
-2. Is `appVersion` reliably available (Spring Boot build-info or image tag in an env var) for all 40 services?
-3. Is there a shared parent POM / Gradle platform where the starter can be added once?
-4. Is IAP + Google Groups acceptable for admin auth, or is there a different corporate IdP?
+1. **Exact env → project/namespace map.** Two projects × two namespaces gives 4 environments, but we counted 6. Please list each env with its project and namespace (e.g. `dev → nonprod/dev`, …, `prod → prod/prod`). Is there anything non-prod (e.g. preprod) living in the prod project?
+2. Is one GKE cluster per project shared by all its namespaces, and do all node pools run with Workload Identity (`GKE_METADATA`)? See the check in §4.1.
+3. What does the version value look like in Terraform: semver (`2.14.0`) or a git SHA / build number?
+4. Admin login: results of the checks in §7.1.
+5. Is the core module built with Maven or Gradle, and does it already import `libraries-bom` / `spring-cloud-gcp-dependencies`?
