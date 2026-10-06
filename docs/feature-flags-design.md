@@ -1,148 +1,182 @@
 # Feature Flag Platform — Design Plan
 
-Status: Draft · Target: Spring Boot microservices on GCP
+Status: Draft v2 · Target: ~40 Spring Boot microservices on GKE, 6 environments (incl. prod)
+
+## 0. Decisions so far
+
+| Topic | Decision |
+|---|---|
+| Runtime | GKE (Workload Identity Federation for GKE) |
+| Scale | ~40 services, 6 environments |
+| Store | **Firestore** (Native mode) |
+| Targeting | Environment, **region**, **app (service)** and **app version**, plus tenant/user later |
+| Other languages | Not now, but the snapshot format and evaluation rules must be language-neutral |
+| API standard | Services use the **OpenFeature** Java API; our platform plugs in as a provider |
 
 ## 1. Problem
 
-- Multiple features are developed in parallel, but turning them on/off today means a config change plus a **restart/redeploy**.
-- We need to toggle features **at runtime**, per environment, and gradually (by tenant/user/percentage), with an audit trail and a fast kill switch.
+- Several features are developed in parallel, but turning them on or off means a config change and a **restart/redeploy**.
+- We need runtime toggles per environment, region and app/version, with an audit trail and a fast kill switch.
 
 ## 2. Goals / Non-goals
 
 **Goals**
-1. Flip a flag and have every running instance see it in **< 5 s** (target), < 60 s worst case, no restart.
-2. Flag checks are **local, in-memory** (sub-microsecond, no network call per evaluation).
-3. Services keep working if the flag platform is down (last-known values → code defaults).
-4. Targeting: on/off, allow-lists (tenant, user, region…), percentage rollout with sticky bucketing.
-5. Audit: who changed what, when, why. Prod changes can require approval.
-6. Drop-in for Spring Boot: one starter dependency, one interface.
+1. A flag change reaches every running pod in **< 5 s** (target), < 2 min worst case, with no restart.
+2. Flag checks are **local and in memory**: no network call per check.
+3. Services keep working if the flag platform is down: last-known values, then the GCS snapshot, then code defaults.
+4. Targeting on region, app, app version and segments; sticky percentage rollouts.
+5. Audit of who changed what, when and why. Prod changes can require approval.
+6. One starter dependency for Spring Boot.
 
 **Non-goals (v1)**
-- A/B experimentation analytics (we expose evaluation events; analysis lives elsewhere).
-- Client-side (browser/mobile) SDKs.
-- Replacing general app config (DB URLs, timeouts) — that stays in Spring config / Secret Manager.
+- Experimentation analytics.
+- Non-Java SDKs (designed for, built later; see §9).
+- Replacing regular app config (DB URLs, timeouts, secrets).
 
-## 3. Build vs. buy — and why we still build on a standard
+## 3. Why custom, on OpenFeature
 
-| Option | Notes |
-|---|---|
-| Spring Cloud Config + `@RefreshScope` + Bus | No restart, but no targeting/percentage rollout, bean re-creation side effects, no audit UI. Good for config, weak for flags. |
-| SaaS (LaunchDarkly, Split, ConfigCat) | Fastest to adopt; cost scales with seats/MAU; data leaves GCP. |
-| Self-hosted OSS (Unleash, Flagsmith, GrowthBook, flagd) | Mature; we operate it. Worth a 1-day spike as a benchmark. |
-| **Custom (this doc)** | Full control, GCP-native IAM/audit, no per-seat cost. We own maintenance. |
+Spring Cloud Config with `@RefreshScope` avoids restarts but has no targeting, rollouts or audit, and it re-creates beans on refresh. SaaS (LaunchDarkly etc.) and self-hosted OSS (Unleash, Flagsmith, flagd) are mature; a one-week spike against one of them is the benchmark for this build.
 
-**Decision:** Build custom, but code services against the **OpenFeature Java API** (`dev.openfeature:sdk`) and ship our platform as an OpenFeature *Provider*. Application code never imports our classes directly, so we can swap to Unleash/flagd/a vendor later without touching feature code.
+**Decision:** build custom, but application code depends only on `dev.openfeature:sdk`. Our platform is an OpenFeature *Provider*, so it can be swapped later without touching feature code. This also gives us ready-made OpenFeature SDKs for other languages later.
 
 ## 4. Architecture
 
 ```
-            ┌──────────────────────── Admin plane ────────────────────────┐
-  Engineers │  Flag Admin UI  ──(IAP)──►  flag-service (Spring Boot)       │
-            │                              │  CRUD, validation, approvals  │
-            │                              ▼                               │
-            │                       Cloud SQL (Postgres)                   │
-            │                       flags, rules, audit_log, versions      │
-            │                              │ on commit                     │
-            │              ┌───────────────┴──────────────┐                │
-            │              ▼                              ▼                │
-            │   GCS: snapshots/{env}.json        Pub/Sub topic             │
-            │   (versioned, immutable copy)      flags-changed-{env}       │
-            └──────────────┬──────────────────────────────┬───────────────┘
-                           │                              │ (push hint: "v=1043")
-            ┌──────────────┼──────────── Data plane ──────┼───────────────┐
-            │              ▼                              ▼                │
-            │   ┌─────────────────────────────────────────────────────┐    │
-            │   │ Every microservice instance                         │    │
-            │   │  flags-spring-boot-starter                          │    │
-            │   │   • bootstrap: GET /v1/snapshot/{env} (→ GCS fallback)│  │
-            │   │   • listen: Pub/Sub sub → refetch if v > local v     │    │
-            │   │   • poll: every 30s with ETag (safety net)           │    │
-            │   │   • AtomicReference<Snapshot> + local evaluator      │    │
-            │   │   • OpenFeature Provider + Micrometer metrics        │    │
-            │   └─────────────────────────────────────────────────────┘    │
-            └──────────────────────────────────────────────────────────────┘
+┌──────────────────────────── Admin plane (prod project / shared tools project) ───────────┐
+│                                                                                          │
+│  Engineers ──IAP──► Flag Admin UI ──► flag-service (Spring Boot on GKE, 2+ replicas)     │
+│                                          │  CRUD, validation, approvals, rollback        │
+│                                          ▼                                               │
+│                         Firestore DB "flags-admin"  (only flag-service can read/write)   │
+│                           flags, envConfigs, segments, auditLog, changeRequests          │
+│                                          │                                               │
+│                                 Snapshot publisher (inside flag-service)                 │
+│                         ┌────────────────┴───────────────────┐                           │
+│                         ▼                                    ▼                           │
+│        GCS gs://<org>-flags-{env}/snapshots/{v}.json   Firestore DB "flags-runtime"      │
+│        (one bucket per env, immutable versions)        heads/{env} = {version, path,     │
+│                                                                 sha256, publishedAt}    │
+└─────────────────────────┬────────────────────────────────────┬───────────────────────────┘
+                          │ read snapshot                      │ realtime listener (gRPC stream)
+┌─────────────────────────┴──── Data plane: every pod ─────────┴───────────────────────────┐
+│  flags-spring-boot-starter                                                               │
+│   • startup: read heads/{env} → download snapshot from GCS → verify sha256 → compile      │
+│   • listen: Firestore snapshot listener on heads/{env}; new version → fetch & swap        │
+│   • poll:   every 120 s get heads/{env} (safety net if the listener stalls)               │
+│   • AtomicReference<CompiledSnapshot> + local evaluator → OpenFeature provider            │
+│   • static context: app, appVersion, region, zone, cluster, namespace (auto-detected)     │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.1 Components
+Key property: **flag-service is not in the data plane.** Pods depend only on Firestore and GCS, which are both managed and highly available. If flag-service is down, only editing is blocked.
 
-**flag-service** (Spring Boot, Cloud Run or GKE, 2+ replicas)
-- Admin REST API (CRUD, validate, approve, rollback to version N).
-- Read API: `GET /v1/snapshot/{env}` → full JSON snapshot with `ETag: "<version>"`; returns `304` when unchanged. This endpoint is cheap and cacheable.
-- On every committed change, in the same transaction: bump `env.version`, write `audit_log`. After commit (transactional outbox → publisher): write `gs://<bucket>/snapshots/{env}/{version}.json` + `latest.json`, publish `{env, version}` to Pub/Sub.
+### 4.1 Why two Firestore databases
 
-**Store: Cloud SQL Postgres** — relational fits rules/approvals/audit well, and we probably already run it. (Firestore is a valid alternative if you want realtime listeners and no DB to manage; see §10.)
+Firestore IAM works per database, not per collection. If pods had read access to the admin database, every service could read all flags, rules, segments and the audit log for every environment.
 
-**Propagation: "push a hint, pull the data"**
-- Pub/Sub message carries only `{env, version}`; the SDK then pulls the snapshot. Messages are tiny, idempotent, and order doesn't matter (SDK just keeps the max version).
-- Each instance needs its *own* subscription to get fan-out. The starter creates `flags-{service}-{instanceId}` with an `expirationPolicy` of 1 day and deletes it on graceful shutdown; orphans self-expire.
-- **Polling every 30 s with ETag** is always on as a safety net (missed messages, Pub/Sub permissions issues, local dev). Phase 1 can ship with polling only.
+- `flags-admin`: the source of truth. Only flag-service's service account has access.
+- `flags-runtime`: holds only the tiny `heads/{env}` documents. All workloads get `roles/datastore.viewer` on this database only (IAM condition on the database resource name). A head doc reveals only a version number and a path, which is harmless.
+- The actual flag content lives in **per-environment GCS buckets**. Each env's workloads get `storage.objectViewer` on their own bucket only, so a dev pod cannot read prod flags.
 
-**Resilience: GCS snapshot**
-- If flag-service is down at startup, the SDK reads `latest.json` from GCS. If that also fails, it uses defaults declared in code. A running instance just keeps its last-known snapshot.
-- Optionally persist the last snapshot to local disk for faster cold starts.
+Put the prod bucket (and ideally prod's `flags-runtime` database) in the prod project if your projects are split by environment.
+
+### 4.2 Change flow
+
+1. An editor saves a change. flag-service validates it (schema, rule compilation, no unknown segments).
+2. **Firestore transaction**: write the flag's env config, append an `auditLog` entry, and increment `environments/{env}.pendingVersion`.
+3. The publisher builds the full env snapshot (all flags + segments for that env), writes `snapshots/{v}.json` and computes its sha256.
+4. It updates `heads/{env}` in `flags-runtime` to `{version: v, path, sha256}`.
+5. Pod listeners fire within about a second, download the object, verify the hash and swap in the new snapshot atomically.
+
+**Crash safety:** if flag-service dies between steps 2 and 4, a reconciler (runs on startup and every minute) republishes any env where `pendingVersion > publishedVersion`. Snapshots are immutable and versioned, so a **rollback** simply points `heads/{env}` back at an older version (and records that in the audit log).
+
+### 4.3 Load and cost (rough)
+
+Assume about 40 services × ~10 pods × 6 envs ≈ 2,400 pods.
+- Listener: one document read per pod per flag change. Negligible.
+- Safety-net poll every 120 s: about 1.7M reads/day across all envs, roughly tens of dollars a month at Firestore list prices. Increase the interval if needed; the listener is the primary path.
+- GCS downloads only happen on a version change.
+- Firestore's write limit on a single document (about 1/s sustained) is far above how often people edit flags.
 
 ## 5. Flag data model
 
+### 5.1 Evaluation context
+
+The starter fills these in automatically at startup:
+
+| Attribute | Source |
+|---|---|
+| `app` | `spring.application.name` |
+| `appVersion` | `BuildProperties` (Spring Boot build-info) or the image tag via env var |
+| `region`, `zone` | GKE metadata server / node topology labels via downward API |
+| `cluster`, `namespace`, `pod` | Downward API env vars |
+| `env` | Starter config (`flags.env`) |
+
+Per-request attributes (`tenantId`, `userId`, …) come from a servlet/WebFlux filter reading the JWT or headers into OpenFeature's transaction context. They are optional today, but the model supports them.
+
+### 5.2 Flag document
+
 ```jsonc
+// flags-admin: flags/{key}
 {
   "key": "checkout.new-pricing-engine",
   "type": "BOOLEAN",                // BOOLEAN | STRING | NUMBER | JSON
-  "description": "Routes pricing to v2 engine",
+  "kind": "RELEASE",                // RELEASE | OPS (kill switch) | PERMISSION
   "owner": "team-payments",
-  "kind": "RELEASE",                // RELEASE | OPS (kill switch) | PERMISSION | EXPERIMENT
-  "expiresAt": "2026-12-31",        // stale-flag alerts for RELEASE flags
-  "variants": { "on": true, "off": false },
-  "environments": {
-    "prod": {
-      "enabled": true,              // master switch; false => offVariant for everyone
-      "offVariant": "off",
-      "rules": [                    // first match wins
-        { "id": "r1", "if": [{ "attr": "tenantId", "op": "IN", "values": ["acme", "globex"] }], "serve": "on" },
-        { "id": "r2", "if": [{ "attr": "region",   "op": "EQ", "values": ["eu-west1"] }],
-          "rollout": { "bucketBy": "userId", "weights": { "on": 10, "off": 90 } } }
-      ],
-      "defaultServe": "off"
-    }
-  }
+  "description": "Routes pricing to v2 engine",
+  "expiresAt": "2027-01-31",
+  "apps": ["order-service", "pricing-service"],   // optional: only these apps receive the flag
+  "variants": { "on": true, "off": false }
+}
+
+// flags-admin: flags/{key}/envs/{env}
+{
+  "enabled": true,                  // master switch; false => offVariant for everyone
+  "offVariant": "off",
+  "rules": [                        // first match wins
+    { "id": "eu-pilot",
+      "if": [ { "attr": "region", "op": "IN", "values": ["europe-west1"] },
+              { "attr": "appVersion", "op": "SEMVER_GTE", "values": ["2.14.0"] } ],
+      "serve": "on" },
+    { "id": "us-ramp",
+      "if": [ { "attr": "region", "op": "STARTS_WITH", "values": ["us-"] } ],
+      "rollout": { "bucketBy": "pod", "weights": { "on": 25, "off": 75 } } }
+  ],
+  "defaultServe": "off",
+  "updatedBy": "alice@yourco.com", "updatedAt": "..."
 }
 ```
 
-Operators: `EQ, NEQ, IN, NOT_IN, STARTS_WITH, MATCHES, GT/LT (numbers, semver), IN_SEGMENT`.
-**Segments** (named reusable lists, e.g. `beta-tenants`, `internal-users`) avoid copy-pasting IDs into many flags.
+Operators: `EQ, NEQ, IN, NOT_IN, STARTS_WITH, MATCHES, GT/LT, SEMVER_EQ/GTE/LT/RANGE, IN_SEGMENT`.
+**Segments** are reusable named rules, e.g. `eu-regions`, `canary-pods`, `beta-tenants`.
 
-**Percentage rollout** — deterministic & sticky:
-`bucket = murmur3_32(flagKey + ":" + salt + ":" + ctx[bucketBy]) mod 10_000` → compare to cumulative weights.
-Same user gets the same answer on every service and every instance, and raising 10% → 20% only adds users (never flips existing ones).
+**Rollouts:** `bucket = murmur3_32(flagKey + ":" + salt + ":" + ctx[bucketBy]) mod 10000`. This is deterministic and sticky, and raising 25% to 50% only adds members.
+- `bucketBy: pod` gives a gradual rollout *across instances*, which is useful when there is no user context.
+- `bucketBy: tenantId` / `userId` is for user-facing rollouts later.
 
-### 5.1 Postgres tables (sketch)
+Snapshot pruning: the starter receives the whole env snapshot, but flags with an `apps` list are skipped for other apps at compile time. Alternatively, the publisher can write per-app snapshots if the size ever matters.
+
+### 5.3 Other collections (flags-admin)
 
 ```
-flag(id, key UNIQUE, type, kind, owner, description, expires_at, archived, created_at)
-flag_variant(flag_id, name, value_json)
-flag_env_config(flag_id, env, enabled, off_variant, default_serve, rules_json, updated_at, updated_by)
-segment(id, key, env, rules_json)
-env_state(env PRIMARY KEY, version BIGINT)            -- bumped on every change
-audit_log(id, env, flag_key, actor, action, before_json, after_json, reason, ticket, at)
-change_request(id, env, flag_key, proposed_json, requested_by, approved_by, status)  -- prod approvals
-outbox(id, env, version, published_at NULL)
+environments/{env}           pendingVersion, publishedVersion, requiresApproval
+segments/{key}/envs/{env}    rules
+auditLog/{autoId}            env, flagKey, actor, action, before, after, reason, ticket, at
+changeRequests/{id}          env, flagKey, proposed, requestedBy, approvedBy, status
+usage/{env}_{app}_{flagKey}  lastEvaluatedAt, count   (from SDK usage reports)
 ```
 
 ## 6. Client SDK: `flags-spring-boot-starter`
 
 ### 6.1 Usage
 
-```java
-// build.gradle
-implementation "com.yourco.flags:flags-spring-boot-starter:1.x"
-
-# application.yml
+```yaml
+# application.yml (env usually injected via ConfigMap per namespace)
 flags:
-  env: prod
-  service-name: order-service
-  endpoint: https://flag-service.internal/v1
-  snapshot-bucket: yourco-flags-prod
-  poll-interval: 30s
-  pubsub.enabled: true
+  env: ${FLAGS_ENV}          # dev | qa | perf | stage | preprod | prod (your 6)
+  bucket: yourco-flags-${FLAGS_ENV}
+  runtime-database: flags-runtime
+  poll-interval: 120s
 ```
 
 ```java
@@ -151,7 +185,8 @@ class PricingService {
   private final Client flags;   // dev.openfeature.sdk.Client, auto-configured
 
   Price price(Order o) {
-    if (flags.getBooleanValue("checkout.new-pricing-engine", false)) {   // false = safe default
+    // default in code = current safe behaviour
+    if (flags.getBooleanValue("checkout.new-pricing-engine", false)) {
       return v2.price(o);
     }
     return v1.price(o);
@@ -159,80 +194,75 @@ class PricingService {
 }
 ```
 
-Context (tenantId, userId, region, appVersion, service) is filled automatically per request by a servlet/WebFlux filter from the JWT/headers into OpenFeature's *transaction context*, so most call sites pass nothing.
-
-Optional sugar:
-```java
-@FeatureToggle(value = "reports.async-export", fallbackMethod = "exportSync")
-public Report export(...) { ... }
-```
-and a `@ConditionalOnFlag` style *router* bean for swapping whole strategy implementations at runtime (beans for both implementations exist; the flag picks one per call — no context refresh).
+Optional sugar (Phase 3): `@FeatureToggle(value = "...", fallbackMethod = "...")`, and a flag-driven *strategy router* bean that picks between two implementations per call without a context refresh.
 
 ### 6.2 Internals
 
-- `AtomicReference<CompiledSnapshot>`: rules pre-compiled (regex compiled, `IN` lists → `HashSet`) on load, so evaluation is allocation-light and lock-free. Swapping in a new snapshot is a single atomic set.
-- Background `ScheduledExecutorService` for polling; Pub/Sub subscriber via `spring-cloud-gcp-starter-pubsub` (or plain client library).
-- Startup: bootstrap with timeout (e.g. 3 s) → GCS → code defaults. Exposed as a Spring Boot **health indicator** (`flags: UP, version=1043, ageSeconds=4`) — degraded, not DOWN, when stale, so it never takes pods out of rotation.
-- **Metrics (Micrometer → Cloud Monitoring):** `flags.snapshot.version`, `flags.snapshot.age`, `flags.refresh.failures`, `flags.evaluations{flag,variant}` (sampled / aggregated, no user IDs as tags).
-- **Evaluation usage reporting:** SDK batches "flag X evaluated by service Y" counts every minute → flag-service, so the UI shows where each flag is used and which flags are dead.
-- **Testing:** `InMemoryProvider` + JUnit 5 extension `@FlagValue(key="...", value="true")`; local dev can point to a `flags-local.yaml` file provider (no GCP needed).
+- `AtomicReference<CompiledSnapshot>`: rules are pre-compiled on load (regex compiled, `IN` lists → `HashSet`, semvers parsed). Evaluation is lock-free and allocates almost nothing.
+- Static context (app, version, region…) is resolved once. Rules that use only static attributes can be **pre-evaluated at snapshot load**, so most checks become a map lookup.
+- Firestore Java client `addSnapshotListener` on `heads/{env}`, with automatic reconnect. A poll every 120 s is the safety net. Versions are applied only if `v > current`.
+- Snapshots that fail hash verification or compilation are rejected; the previous one is kept and a metric/alert fires.
+- Startup timeout (default 5 s): if the snapshot is unavailable, the app **starts anyway on code defaults** and keeps retrying in the background.
+- **Health indicator** `flags: {version, ageSeconds, source}` reports UNKNOWN/degraded when stale, never DOWN, so a flag outage never fails readiness probes.
+- **Micrometer → Cloud Monitoring:** `flags.snapshot.version`, `flags.snapshot.age`, `flags.refresh.failures`, `flags.evaluations{flag,variant}` (no user IDs as tags).
+- **Usage reporting:** every 5 min, aggregated `{flag, variant, count}` goes to flag-service, which feeds "where is this flag used" and dead-flag detection.
+- **Testing:** `InMemoryProvider` + JUnit 5 `@FlagValue(key=..., value=...)`. For local dev, a `flags-local.yaml` file provider means no GCP access is needed.
 
 ### 6.3 Cross-service consistency
 
-A request crossing services A → B → C might see different snapshot versions for a few seconds during a change. If a feature *must* be consistent across a call chain, evaluate it once at the edge and forward the result via OpenTelemetry **baggage** (`ff.checkout.new-pricing-engine=on`); downstream SDKs honour baggage overrides for flags marked `propagate: true`.
+During a change, a request going A → B → C may briefly see different versions. For flags marked `propagate: true`, evaluate once at the edge and pass the value in OpenTelemetry baggage; downstream providers honour it.
 
 ## 7. Admin UI & workflow
 
-- Small React/Angular app (or server-side Thymeleaf) served behind **Identity-Aware Proxy**; Google Groups → roles.
-- Roles per environment: `viewer`, `editor`, `approver`. Prod edits on `RELEASE` flags → change request + second-person approval. `OPS` kill switches can be flipped immediately by on-call (still audited).
-- Features: flag list w/ search & owner filter, rule editor with "evaluate as…" preview (enter a context, see the result), diff view, one-click rollback to any prior version, stale flag report.
-- Scheduled changes (e.g. ramp 5% → 25% → 50% → 100% on a schedule) via Cloud Scheduler → flag-service.
-- Also expose everything through the API + a small CLI / Terraform provider later so flags can live next to code reviews if desired.
+- Served by flag-service behind **IAP**. Google Groups map to roles per env: `viewer`, `editor`, `approver`.
+- Approval required for `RELEASE` flag changes in prod (configurable per env via `environments/{env}.requiresApproval`). `OPS` kill switches can be flipped immediately by on-call, but are still audited.
+- Features:
+  - Flag list with filters: owner, app, env, stale.
+  - Rule editor with **"evaluate as…"**: pick app, version and region and see the result.
+  - Diff before save.
+  - **Promote config across envs** (e.g. qa → stage) with a diff.
+  - One-click rollback to any snapshot version.
+- Scheduled ramps (5% → 25% → 100%) via Cloud Scheduler → flag-service.
+- Audit stream: a Firestore trigger (Eventarc) on `auditLog` → Pub/Sub → Slack `#flag-changes` and BigQuery.
 
-## 8. Security
-
-- Workload Identity: each service's GSA gets `storage.objectViewer` on its env snapshot bucket, `pubsub.subscriber` + subscription create/delete on `flags-changed-{env}`, and `run.invoker` (or internal LB auth) for the read API.
-- Separate buckets/topics per environment; dev SDKs physically can't read prod.
-- Read API exposes only what SDKs need; no secrets in flags (lint rule + UI validation).
-- Audit: our `audit_log` table + Cloud Audit Logs on bucket/topic. Optionally stream audit events to BigQuery and to Slack (#flag-changes).
-
-## 9. Failure modes
+## 8. Failure modes
 
 | Failure | Behaviour |
 |---|---|
-| flag-service down | Running pods keep last snapshot; new pods bootstrap from GCS. Only admin edits are blocked. |
-| Pub/Sub delay/loss | Polling picks up the change within ≤ 30 s. |
-| GCS + flag-service down at cold start | Code defaults (always choose the *safe/old* behaviour as the default). |
-| Bad flag config pushed | Server-side schema validation; SDK rejects snapshots that fail to compile and keeps the previous one (+ alert). Rollback button. |
-| Huge snapshot | Per-env snapshot compressed; alert if > 1 MB; segments with very large ID lists stored separately. |
+| flag-service down | No impact on pods; editing is blocked. |
+| Firestore listener drops | Client auto-reconnects; the 120 s poll catches up. |
+| Firestore unavailable | Pods keep their current snapshot. New pods can fall back to `latest.json` in GCS (written alongside each version). |
+| GCS + Firestore unavailable at cold start | Code defaults; retries in the background. |
+| Bad config published | Server-side validation; SDK rejects snapshots that don't compile; one-click rollback. |
+| Snapshot grows large | Alert at 1 MB; switch to per-app snapshots. |
 
-## 10. Alternatives considered for propagation
+## 9. Designing for other languages (later)
 
-- **Firestore snapshot listeners** instead of Postgres + Pub/Sub: realtime push for free, no per-instance subscriptions; weaker for relational queries/approvals, and every instance holds a listener. Good choice if the team prefers serverless and no Cloud SQL.
-- **SSE/gRPC stream from flag-service**: lowest latency, but flag-service now holds a connection per pod and becomes a data-plane dependency.
-- **Polling only**: simplest; 15–30 s latency is acceptable for most release flags. ← this is Phase 1.
+- **JSON Schema** for the snapshot format, versioned (`"schemaVersion": 1`).
+- A **shared conformance suite**: JSON test vectors (`context + snapshot → expected variant`, including hash buckets). The Java SDK must pass it from day one, so Node/Python/Go providers can be validated against the same file.
+- Server-side evaluation for front-ends and anything without an SDK: flag-service exposes **OFREP** (OpenFeature Remote Evaluation Protocol). Existing OpenFeature OFREP providers for web, Node, Python, Go and .NET can then call it with no custom SDK at all.
 
-## 11. Delivery plan
+## 10. Delivery plan
 
 | Phase | Scope | Outcome |
 |---|---|---|
-| **0. Spike (1 wk)** | Run Unleash or flagd locally against one service to benchmark the UX; confirm build decision. Agree flag naming (`<domain>.<feature>`) and lifecycle policy. | Go/no-go on custom |
-| **1. MVP (3–4 wks)** | flag-service with Postgres, boolean flags, env on/off + tenant allow-list, snapshot API + ETag, GCS snapshot, SDK with polling + OpenFeature provider, health/metrics, audit log, minimal UI behind IAP. Pilot on 1–2 services. | Toggle without restart (≤ 30 s) |
-| **2. Real-time & targeting (2–3 wks)** | Pub/Sub hint + per-instance subscriptions, percentage rollouts, segments, multivariate/JSON flags, "evaluate as" preview, rollback. | < 5 s propagation, gradual rollouts |
-| **3. Governance (2 wks)** | Prod approvals, scheduled ramps, Slack/BigQuery audit stream, usage reporting, stale-flag alerts, `@FeatureToggle` annotation, JUnit extension. | Safe at scale |
-| **4. Adoption** | Migrate existing restart-based toggles; add to service template; docs & runbook. | All services on platform |
+| **0. Spike (1 wk)** | Benchmark Unleash or flagd on one service. Agree naming (`<domain>.<feature>`), lifecycle policy and env names. Terraform for the Firestore DBs, buckets and IAM. | Go/no-go; infra ready |
+| **1. MVP (3–4 wks)** | flag-service + `flags-admin`; boolean flags; env on/off + **region / app / appVersion** rules; snapshot publisher + reconciler; starter with listener + poll + OpenFeature provider + health/metrics; audit log; minimal UI behind IAP. Pilot on 2 services in non-prod. | Toggle without restart, < 5 s |
+| **2. Rollouts (2 wks)** | Percentage rollouts, segments, string/number/JSON flags, "evaluate as", rollback, promote-across-envs, conformance test vectors. | Gradual, safe rollouts |
+| **3. Governance (2 wks)** | Prod approvals, scheduled ramps, Slack/BigQuery audit stream, usage reporting, stale-flag alerts + CI check, `@FeatureToggle`, JUnit extension. | Safe at 40-service scale |
+| **4. Adoption (ongoing)** | Add the starter to the service template; migrate existing restart-based toggles service by service; runbook. | All 40 services onboarded |
+| **5. Later** | OFREP endpoint; Node/Python providers using the conformance suite; tenant/user targeting. | Multi-language |
 
-## 12. Conventions to agree on
+## 11. Conventions
 
-- Default value in code = **current/safe behaviour**.
-- Every `RELEASE` flag has an owner + expiry; removal ticket created on creation; CI warns on flags past expiry still referenced in code.
-- Kill switches (`OPS`) are long-lived and documented in runbooks.
-- No flag nesting deeper than one prerequisite; no flags inside hot loops without caching the result for the request.
+- Default in code = **current/safe behaviour**.
+- Every `RELEASE` flag has an owner and an expiry. CI warns when an expired flag key is still referenced in code.
+- `OPS` kill switches are long-lived and listed in runbooks.
+- At most one prerequisite level; no complex logic hidden in flag rules.
 
-## 13. Open questions
+## 12. Remaining open questions
 
-1. Runtime: GKE, Cloud Run, or both? (affects instance identity for subscriptions and connection limits)
-2. Rough scale: number of services, instances per service, environments?
-3. Is targeting needed beyond tenant-level (per-user, per-region, app version)?
-4. Existing Cloud SQL / Firestore preference, and existing IdP groups for RBAC?
-5. Are there non-Java consumers (Node, Python, front-ends) that will need SDKs later?
+1. Are the 6 environments in separate GCP projects, or one project with separate namespaces/clusters? (This decides where the buckets and `flags-runtime` live.)
+2. Is `appVersion` reliably available (Spring Boot build-info or image tag in an env var) for all 40 services?
+3. Is there a shared parent POM / Gradle platform where the starter can be added once?
+4. Is IAP + Google Groups acceptable for admin auth, or is there a different corporate IdP?
