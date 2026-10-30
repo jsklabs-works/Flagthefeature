@@ -32,6 +32,8 @@ Status: Reference guide · Scope: Australian domestic retail, wholesale and cros
 14. [Side-by-side comparison](#14-side-by-side-comparison)
 15. [Regulation, risk and consumer protection](#15-regulation-risk-and-consumer-protection)
 16. [Glossary (A–Z)](#16-glossary-az)
+17. [Inside the bank: how a payment is processed](#17-inside-the-bank-how-a-payment-is-processed)
+18. [Message types reference](#18-message-types-reference)
 
 ---
 
@@ -178,7 +180,9 @@ flowchart TB
 | **Four-party scheme** | A scheme where issuer and acquirer are different institutions (Visa, Mastercard, eftpos). |
 | **Three-party scheme** | The scheme itself is both issuer and acquirer (traditional Amex, Diners). |
 | **PSP / Payment facilitator (PayFac)** | A provider that onboards many small merchants under its own master merchant agreement with an acquirer (for example Square, Stripe). |
-| **Payment gateway** | Software that securely passes online card data from a website or app to the acquirer. |
+| **Payment gateway** | The service between the merchant and the acquirer. For online payments it captures and tokenises the card, runs 3-D Secure, sends authorisations, handles capture, voids, refunds, reversals and retries, and produces payout reports. In store, a POS gateway or terminal host connects terminals and integrated POS systems to one or more acquirers using AS 2805. |
+| **AS 2805** | The Australian standard for card and EFT messages, based on ISO 8583. Used between terminals, gateways, acquirers, eftpos and issuers, including key management and message authentication (MAC). |
+| **Dual vs single message** | *Dual message*: authorisation (`0100`) is separate from clearing (a batch file). Used for credit and most scheme debit. *Single message*: one `0200` both authorises and creates the financial record. Used by eftpos and ATMs. |
 | **Terminal / POS** | The device that reads the card (EMV chip, contactless, or swipe). |
 | **Interchange fee** | A fee paid by the acquirer to the issuer on each transaction in four-party schemes. It is regulated by RBA standards. |
 | **Scheme fees** | Fees the scheme charges issuers and acquirers for using the network. |
@@ -194,13 +198,15 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  CH["Cardholder"] -. "1. tap card" .-> M["Merchant<br/>terminal"]
-  M -. "2. auth request" .-> ACQ["Acquirer"]
-  ACQ -. "3." .-> SCH["Scheme<br/>Visa / Mastercard"]
-  SCH -. "4." .-> ISS["Issuer"]
-  ISS -. "5. approve + hold" .-> SCH
-  SCH -. "6." .-> ACQ
-  ACQ -. "7. approved" .-> M
+  CH["Cardholder"] -. "1. tap card (EMV)" .-> M["Merchant<br/>terminal"]
+  M -. "2. AS 2805 0100" .-> GW["Payment gateway<br/>terminal host / switch"]
+  GW -. "3. 0100" .-> ACQ["Acquirer"]
+  ACQ -. "4. 0100" .-> SCH["Scheme<br/>Visa / Mastercard"]
+  SCH -. "5. 0100" .-> ISS["Issuer"]
+  ISS -. "6. 0110 approve + hold" .-> SCH
+  SCH -. "7. 0110" .-> ACQ
+  ACQ -. "8. 0110" .-> GW
+  GW -. "9. approved" .-> M
 
   ISS == "settlement: amount less interchange" ==> RITS["RITS / ESAs"]
   RITS == "credit acquirer" ==> ACQ
@@ -215,6 +221,7 @@ sequenceDiagram
   autonumber
   participant CH as Cardholder
   participant M as Merchant / POS
+  participant G as Payment gateway
   participant A as Acquirer
   participant S as Scheme
   participant I as Issuer
@@ -222,21 +229,25 @@ sequenceDiagram
 
   rect rgb(230,240,255)
   note over CH,I: AUTHORISATION (around 1–2 seconds)
-  CH->>M: Taps card or phone (EMV contactless, tokenised)
-  M->>A: Authorisation request (ISO 8583): PAN or token, amount, MCC, cryptogram
-  A->>S: Route request
-  S->>I: Forward to issuer BIN
-  I->>I: Validate cryptogram, check limit and fraud score, place hold
-  I-->>S: Approve (auth code)
-  S-->>A: Approve
-  A-->>M: Approved, receipt printed
+  CH->>M: Taps card or phone (EMV contactless, ARQC cryptogram)
+  M->>G: AS 2805 0100 auth request, MAC-protected
+  G->>G: Verify MAC, translate keys in HSM, pick acquirer
+  G->>A: 0100: PAN or token, amount, MCC, POS entry mode, EMV data
+  A->>S: 0100 in scheme format
+  S->>I: 0100 forwarded to issuer BIN
+  I->>I: HSM verifies ARQC, checks limit and fraud score, places hold
+  I-->>S: 0110 approve (DE39=00, auth code, ARPC)
+  S-->>A: 0110
+  A-->>G: 0110
+  G-->>M: Approved, receipt printed. On timeout a 0400 reversal is sent
   end
 
   rect rgb(235,250,235)
   note over M,I: CLEARING (end of day)
-  M->>A: Settle or close batch (captured transactions)
-  A->>S: Clearing file (presentments)
-  S->>I: Clearing records, issuer posts to card account
+  M->>G: AS 2805 0500 reconciliation totals
+  G->>A: Capture file of approved transactions
+  A->>S: Clearing file: Visa BASE II TC05 / Mastercard IPM 1240
+  S->>I: Presentments, issuer matches each to its hold and posts it
   end
 
   rect rgb(255,245,225)
@@ -881,3 +892,176 @@ flowchart LR
 | **TSP** | Token Service Provider. |
 | **UETR** | Unique End-to-end Transaction Reference (SWIFT gpi). |
 | **Y-copy** | SWIFT model where the settlement copy goes to RITS before the message is released. |
+
+---
+
+## 17. Inside the bank: how a payment is processed
+
+The diagrams above treat each bank as one box. Inside, a payment passes through a chain of systems. The interactive player has three scenarios that animate these steps: **Inside the issuer**, **Outbound payment** and **Inbound payment**.
+
+### 17.1 Outbound (sending bank), for example an NPP payment
+
+```mermaid
+flowchart LR
+  C["Customer"] -->|"app API"| CH["Digital channel<br/>MFA, step-up"]
+  CH -->|"pain.001 (canonical)"| HUB["Payment hub<br/>validate, enrich,<br/>rail selection"]
+  HUB <-->|"score"| FR["Fraud engine<br/>scams, mules"]
+  HUB <-->|"screen"| SA["Sanctions and AML"]
+  HUB <-->|"debit / hold"| CORE["Core banking"]
+  HUB <-->|"position"| TR["Treasury<br/>ESA / FSS liquidity"]
+  HUB -->|"payment"| PAG["NPP gateway (PAG)<br/>build + sign pacs.008"]
+  PAG -->|"pacs.008"| NPP["NPP + RBA FSS"]
+  NPP -->|"pacs.002 ACSC / RJCT"| PAG
+  HUB -->|"journals"| GL["General ledger<br/>suspense, ESA recon"]
+  HUB -->|"status, camt.054"| CH
+```
+
+| # | Step | System | What happens | Messages / data |
+|---|---|---|---|---|
+| 1 | Capture | Digital channel / host-to-host | Customer authenticates (biometric, MFA) and creates the payment. Corporates upload files. | App API, `pain.001` |
+| 2 | Technical validation | Payment hub | Schema, mandatory fields, character set, duplicate check (EndToEndId, amount, payee, time window) | |
+| 3 | Business validation | Payment hub | BSB valid (AusPayNet BSB directory), account status, limits, cut-off times, entitlements | |
+| 4 | Enrichment | Payment hub | Resolve PayID and show the payee name (Confirmation of Payee), add BIC and clearing codes, purpose codes, charges | NPP Addressing Service lookup |
+| 5 | Rail selection | Payment hub | NPP if the payee is reachable and the payment is real-time eligible, else BECS (batch) or HVCS (high value or urgent), or SWIFT for cross-border | |
+| 6 | Fraud and scam screening | Fraud engine | Real-time model: new payee, device, behavioural biometrics, amount versus history, mule intelligence. May hold, warn or call the customer | Score API |
+| 7 | Sanctions and AML | Screening engine | Names against the DFAT Consolidated List and other lists; AML transaction monitoring | Screening API |
+| 8 | Funds control | Core banking | Check available balance and overdraft, debit the customer, credit the outward suspense GL | Debit posting |
+| 9 | Liquidity | Treasury | Check the FSS allocation or ESA position, queue if short, top up from RITS (repo) | |
+| 10 | Message build and send | Gateway (NPP PAG / SWIFT / BECS file) | Map to ISO 20022, sign with HSM keys, send | `pacs.008` / `pacs.009` / ABA file |
+| 11 | Status | Payment hub | Receive accept, settled or rejected | `pacs.002` (ACSC / RJCT + reason) |
+| 12 | Accounting | General ledger | Dr outward suspense, Cr ESA settlement account | Journal |
+| 13 | Notification | Channel | Push notification, receipt, corporate status | `camt.054`, `pain.002` |
+| 14 | End of day | Ops / finance | Reconcile ESA (RITS reports) versus GL versus hub, investigate breaks, regulatory reporting (AUSTRAC SMR / TTR / IFTI where relevant), statements | `camt.053` |
+| 15 | Exceptions | Payment hub / ops | Reject: reverse the debit. Recall: send `camt.056` and receive `camt.029`. Returned funds arrive by `pacs.004` | |
+
+### 17.2 Inbound (receiving bank)
+
+1. **Receive** `pacs.008` from the NPP (or HVCS/SWIFT, or a BECS file). Verify the signature and schema.
+2. **Account checks** in core banking: exists, open, can receive, not deceased or blocked. Name match where relevant.
+3. **Sanctions screening** and **inbound fraud / mule monitoring**.
+4. **Accept or reject** with `pacs.002` before settlement (for example AC04 closed account, AC01 incorrect account).
+5. **Settlement**: FSS credits the bank's ESA. The bank may only credit the customer once settlement is confirmed (`pacs.002 ACSC`).
+6. **Post**: Cr customer, Dr inward suspense. GL: Dr ESA settlement account, Cr inward suspense.
+7. **Notify** the customer (push, `camt.054`).
+8. **Exceptions**: return funds with `pacs.004`; answer recalls (`camt.056`) with `camt.029`, following ePayments Code mistaken-payment rules and scam processes.
+
+### 17.3 Inside the issuer: card authorisation (~100–300 ms)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Scheme
+  participant SW as Card switch
+  participant H as HSM
+  participant A as Auth host
+  participant F as Fraud engine
+  participant L as Core ledger
+  participant B as Back office
+
+  S->>SW: 0100 (DE2, DE4, DE18, DE22, DE52, DE55)
+  SW->>SW: Parse bitmap, dedupe on STAN/RRN, map to internal format
+  SW->>H: Verify ARQC / PIN / CVV, generate ARPC
+  H-->>SW: Valid + ARPC
+  SW->>A: Authorise
+  A->>A: Card status, token status, velocity, MCC and country rules, card controls
+  A->>F: Score
+  F-->>A: Low risk
+  A->>L: Check open-to-buy, place hold (memo post)
+  L-->>A: Hold placed
+  A-->>SW: Approve
+  SW-->>S: 0110 (DE38 auth code, DE39=00, DE55 ARPC)
+  note over S,B: Next day
+  S->>B: Clearing file (TC05 / IPM 1240)
+  B->>B: Match presentment to hold, post to ledger
+  S->>B: Settlement report, then fund ESA and reconcile GL
+```
+
+**Stand-In Processing (STIP).** If the issuer is unavailable, the scheme approves or declines within issuer-set limits and later sends an `0120` advice.
+
+---
+
+## 18. Message types reference
+
+> Field lists are simplified. Each scheme and rail publishes its own message usage guidelines.
+
+### 18.1 Card messages: ISO 8583 / AS 2805
+
+| MTI | Meaning |
+|---|---|
+| `0100` / `0110` | Authorisation request / response (dual message) |
+| `0120` / `0130` | Authorisation advice (for example after STIP) / response |
+| `0200` / `0210` | Financial transaction request / response (single message: eftpos, ATM) |
+| `0220` / `0230` | Financial advice: completion, offline, forced post |
+| `0400` / `0410` | Reversal request / response (timeout, void) |
+| `0420` / `0430` | Reversal advice / response |
+| `0500` / `0510` | Reconciliation / settlement totals (AS 2805) |
+| `0800` / `0810` | Network management: sign-on, key exchange, echo |
+
+| Data element | Meaning |
+|---|---|
+| DE2 / DE3 / DE4 | PAN / processing code (00 purchase, 01 cash, 20 refund; account type) / amount |
+| DE11 / DE37 / DE38 | STAN / retrieval reference number / auth code |
+| DE18 / DE22 | MCC / POS entry mode (05 chip, 07 contactless, 81 e-commerce) |
+| DE39 | Response code: 00 approved, 05 do not honour, 51 insufficient funds, 54 expired, 55 incorrect PIN, 91 issuer unavailable |
+| DE41 / DE42 | Terminal ID / merchant ID |
+| DE52 / DE55 | Encrypted PIN block / EMV chip data (ARQC, ATC, TVR; ARPC in the response) |
+| DE64 / DE128 | MAC |
+
+### 18.2 Card clearing and disputes
+
+| Code | Meaning |
+|---|---|
+| Visa BASE II TC05 / TC06 / TC07 | Sales draft / credit voucher (refund) / cash disbursement |
+| Visa TC15–17 | Chargeback versions of TC05–07 |
+| Mastercard IPM 1240 (function 200 / 205) | First presentment / second presentment |
+| Mastercard IPM 1442 (450) | First chargeback |
+| Mastercard IPM 1644 / 1740 | Administrative / fee collection |
+| ARN | Acquirer Reference Number that follows a transaction through clearing and disputes |
+
+### 18.3 EMV 3-D Secure 2.x
+
+| Message | Between | Purpose |
+|---|---|---|
+| 3DS Method | Browser ↔ ACS | Device data collection |
+| `AReq` / `ARes` | 3DS Server → DS → ACS | Authentication request; status Y / C / N / A / R |
+| `CReq` / `CRes` | Browser or app ↔ ACS | Challenge |
+| `RReq` / `RRes` | ACS → DS → 3DS Server | Final result with CAVV / AAV and ECI |
+| `PReq` / `PRes` | 3DS Server ↔ DS | Card range cache |
+
+### 18.4 ISO 20022 (NPP, HVCS, cross-border, corporate banking)
+
+| Message | Meaning |
+|---|---|
+| `pain.001` / `pain.002` | Customer credit transfer initiation / status |
+| `pain.008` | Customer direct debit initiation |
+| `pain.013` / `pain.014` | Creditor payment activation request / response (request to pay; PayTo-style initiation) |
+| `pacs.008` | FI-to-FI customer credit transfer |
+| `pacs.009` (COV) | FI credit transfer / cover payment |
+| `pacs.002` | Payment status: ACTC, ACCP, ACSC (settled), RJCT |
+| `pacs.004` | Payment return |
+| `pacs.028` | Payment status request |
+| `camt.056` / `camt.029` | Recall request / resolution of investigation |
+| `camt.052` / `camt.053` / `camt.054` | Intraday report / statement / debit-credit notification |
+| Reason codes | AC01 incorrect account no., AC04 closed, AC06 blocked, AM04 insufficient funds, AG01 forbidden, BE01 name mismatch, FF01 invalid format |
+
+### 18.5 BECS ABA file
+
+| Item | Meaning |
+|---|---|
+| Record type 0 | Descriptive record: bank, user name, DE User ID, description, processing date |
+| Record type 1 | Detail record: BSB, account, transaction code, amount, name, lodgement reference, trace BSB/account, remitter |
+| Record type 2 | Return record |
+| Record type 7 | File total record |
+| Transaction code 13 | Externally initiated debit |
+| Transaction codes 50–57 | Credits: 50 general, 51 Australian Government security interest, 52 family allowance, 53 pay, 54 pension, 55 allotment, 56 dividend, 57 debenture/note interest |
+| Return reasons | 1 invalid BSB, 2 payment stopped, 3 account closed, 4 customer deceased, 5 no account / incorrect account no., 6 refer to customer, 8 invalid user ID, 9 technically invalid |
+
+### 18.6 SWIFT MT (legacy) and ISO 20022 equivalents
+
+| MT | ISO 20022 | Meaning |
+|---|---|---|
+| MT103 | `pacs.008` | Customer credit transfer |
+| MT202 / 202COV | `pacs.009` / `pacs.009 COV` | Bank transfer / cover |
+| MT900 / MT910 | `camt.054` | Debit / credit confirmation |
+| MT940 / MT950 | `camt.053` | Customer / nostro statement |
+| MT096 / MT097 | Y-copy settlement request / response | FIN Copy to RITS / authorisation to release |
