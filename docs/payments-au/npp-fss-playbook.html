@@ -225,6 +225,17 @@ svg.esa{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 .gl dt{font-weight:600}
 .gl dd{margin:3px 0 0;color:var(--muted);font-size:14px}
 .search{width:100%;max-width:380px;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 12px}
+.jtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin-top:12px}
+.jtiles div{border:1px solid var(--line);border-radius:10px;padding:10px 12px;transition:border-color .2s,background .2s}
+.jtiles div.ch{border-color:var(--accent);background:var(--accent-soft)}
+.jtiles span{font-size:12.5px;color:var(--muted);display:block}
+.jtiles b{font-family:var(--f-display);font-size:20px;font-variant-numeric:tabular-nums}
+.jtiles small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:22px 0 20px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.sim input.nin,.nin{width:96px;height:32px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:0 8px;font-variant-numeric:tabular-nums}
+.flow div.wait{opacity:1;border-color:var(--warn)} .flow div.gone{opacity:.45;text-decoration:line-through}
 footer.foot{margin-top:40px;font-size:12.5px;color:var(--muted);max-width:84ch}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
@@ -266,9 +277,9 @@ footer.foot{margin-top:40px;font-size:12.5px;color:var(--muted);max-width:84ch}
     <div class="grid g3" style="margin-top:10px">
       <div class="card pad"><div class="kicker">Read</div><p>Each play follows one section of the article, with direct quotes where precision matters.</p></div>
       <div class="card pad"><div class="kicker">Try</div><p>Step through Figure 1, send settlement requests to a simulated FSS, and move ESA funds with trigger points as in Figure 2.</p></div>
-      <div class="card pad"><div class="kicker">Check</div><p>Mark plays as reviewed, then take the 12-question knowledge check. Progress is saved only in this browser.</p></div>
+      <div class="card pad"><div class="kicker">Check</div><p>Mark plays as reviewed, then take the 15-question knowledge check. Progress is saved only in this browser.</p></div>
     </div>
-    <div class="btnrow" style="margin-top:18px"><a class="btn primary" href="#why">Start: why fast payments →</a><a class="btn" href="#process">Jump to the payment walkthrough</a><a class="btn" href="payments-playbook.html#npp" target="_blank" rel="noopener">Related: NPP play in the payments playbook ↗</a></div>
+    <div class="btnrow" style="margin-top:18px"><a class="btn primary" href="#why">Start: why fast payments →</a><a class="btn" href="#process">Jump to the payment walkthrough</a><a class="btn" href="#concepts-esa">Concepts explained</a><a class="btn" href="payments-playbook.html#npp" target="_blank" rel="noopener">Related: NPP play in the payments playbook ↗</a></div>
     <div id="startList" class="gap"></div>
   </section>
 
@@ -491,6 +502,150 @@ footer.foot{margin-top:40px;font-size:12.5px;color:var(--muted);max-width:84ch}
     <div class="btnrow gap"><a class="btn primary" href="#quiz">Take the knowledge check →</a></div>
   </section>
 
+  <!-- CONCEPTS -->
+  <section class="view" data-view="concepts" hidden>
+    <div class="eyebrow">Concepts explained</div>
+    <h2>The ideas behind the article</h2>
+    <p class="lead">Five ideas the article relies on but doesn't stop to explain. Each tab has a short explanation and something to try. Material that comes from general payments knowledge rather than the article is labelled.</p>
+    <div class="tabs" role="tablist" id="cxTabs"></div>
+
+    <div class="cx" data-cx="esa">
+      <div class="grid g2" style="align-items:start">
+        <div class="prose">
+          <h3>ESA: an Exchange Settlement Account</h3>
+          <p>An ESA is a bank's account <b>at the Reserve Bank</b>. Your bank account holds money your bank owes you. An ESA holds money the Reserve Bank owes the bank: <b>central bank money</b>.</p>
+          <p>Banks use their ESAs to pay each other. When you send $250 from Bank A to a friend at Bank B, Bank A's ESA goes down $250 and Bank B's goes up $250. That transfer is what actually moves the money between banks.</p>
+          <p>Mainly ADIs hold ESAs. Others settle through a sponsor that has one. For the NPP, each institution divides its single ESA into an <b>FSS Allocation</b> (NPP payments, 24/7) and a <b>RITS Allocation</b> (everything else, in RITS hours). See <a href="#liquidity">play 6</a>.</p>
+        </div>
+        <div class="card pad">
+          <div class="kicker">Is an ESA a suspense account?</div>
+          <p><b>No.</b> They're different but connected. The ESA lives at the Reserve Bank. A suspense account is a temporary holding account inside the bank's own books.</p>
+          <div class="tablewrap" style="margin-top:10px"><table>
+            <thead><tr><th></th><th>ESA</th><th>Suspense account</th></tr></thead>
+            <tbody>
+              <tr><td><b>Where</b></td><td>At the Reserve Bank, in RITS</td><td>In the bank's general ledger</td></tr>
+              <tr><td><b>What</b></td><td>Real central bank money</td><td>A bookkeeping waiting room</td></tr>
+              <tr><td><b>Moved by</b></td><td>Interbank settlement (FSS, RITS, batches)</td><td>The bank's own journal entries</td></tr>
+              <tr><td><b>Balance</b></td><td>Long-lived, can be large</td><td>Should clear back to zero</td></tr>
+            </tbody></table></div>
+        </div>
+      </div>
+      <div class="card pad gap">
+        <div class="play-head"><div><div class="kicker">Try it · follow $250 through the payer bank's books</div><h3 id="jTitle"></h3></div>
+          <div class="stepnav" style="margin-top:0"><button class="btn" id="jP" aria-label="Previous step">←</button><button class="btn primary" id="jN">Next step →</button></div></div>
+        <p id="jDesc" style="margin-top:8px"></p>
+        <div class="jtiles" id="jTiles"></div>
+        <div id="jRecon" style="margin-top:10px"></div>
+        <p class="note" style="margin-top:10px">A bank keeps a mirror of its ESA in its own general ledger (the "ESA settlement account") and reconciles it against Reserve Bank statements. Account names and balances are illustrative; the journal pattern is general banking practice, not from the article.</p>
+      </div>
+    </div>
+
+    <div class="cx" data-cx="overlay" hidden>
+      <div class="grid g2" style="align-items:start">
+        <div class="prose">
+          <h3>Overlay services</h3>
+          <p>The NPP Basic Infrastructure is the plumbing: a fast messaging network, payment gateways, PayID addressing and real-time settlement through the FSS.</p>
+          <p>An <b>overlay service</b> is a commercial payment product built on top of that plumbing, with its own rules, message flows or customer experience. In the article's words, overlays “use the NPP Basic Infrastructure's capabilities to send payment messages quickly, address payments using PayIDs and send detailed information with payments”.</p>
+          <p>They range from simple industry standards to new message flows or payment types, and an overlay can launch <b>without every participant joining</b>. That gets new services to market faster and allows competition on shared infrastructure.</p>
+        </div>
+        <div class="stack">
+          <div class="card pad"><div class="kicker">Analogy</div><p>The NPP is the road network. Overlay services are the delivery companies that use the roads, each with its own vehicles, prices and promises to customers.</p></div>
+          <div class="card pad"><div class="kicker">Examples</div><ul class="clean"><li><b>Osko by BPAY</b>, the first overlay (from the article): fast payments with data, 24/7, in digital banking; usable by corporates and fintechs.</li><li><b>PayTo</b> (later, not in the article): payer-approved payment agreements, the NPP's replacement for direct debit.</li></ul></div>
+          <a class="btn" href="#infra">See overlays in Figure 1 →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cx" data-cx="clearing" hidden>
+      <h3>Clearing vs settlement</h3>
+      <p class="lead" style="margin-top:6px">Every interbank payment has two separate parts.</p>
+      <div class="tablewrap" style="margin-top:12px"><table>
+        <thead><tr><th></th><th>Clearing</th><th>Settlement</th></tr></thead>
+        <tbody>
+          <tr><td><b>What happens</b></td><td>Banks exchange payment details and agree who owes whom</td><td>Money actually moves between the banks to pay what's owed</td></tr>
+          <tr><td><b>Question</b></td><td>“Is this payment valid, and how much do I owe you?”</td><td>“Has the money changed hands?”</td></tr>
+          <tr><td><b>Where</b></td><td>On the payment rail: NPP network, card networks, BECS files</td><td>At the Reserve Bank, across ESAs in RITS or the FSS</td></tr>
+          <tr><td><b>Final?</b></td><td>No, it's an agreement to pay</td><td>Yes, final and irrevocable</td></tr>
+        </tbody></table></div>
+      <div class="grid g2 gap">
+        <div class="card pad"><div class="kicker">In an NPP payment (from the article)</div>
+          <ol class="clean"><li><b>Clearing:</b> Bank A sends the payment details. Bank B checks the account exists and can receive NPP payments, then confirms.</li>
+          <li><b>Settlement:</b> Bank A's gateway sends a settlement request. The FSS checks A's FSS Allocation, then debits A's ESA and credits B's at the same moment, in about 50 ms.</li>
+          <li><b>Then</b> Bank B credits the payee.</li></ol>
+          <a class="btn" href="#process" style="margin-top:10px">Step through it in play 4 →</a></div>
+        <div class="card pad"><div class="kicker">Why the gap matters</div>
+          <p>For cards and BECS, clearing happens through the day but settlement happens later, in net batches. In that gap, one bank is effectively trusting another to pay. The NPP removes the gap by settling every payment immediately and individually, which is why the article says the FSS “eliminates credit risk” and why the payee's bank can release funds within seconds.</p></div>
+      </div>
+    </div>
+
+    <div class="cx" data-cx="rtgs" hidden>
+      <h3>RTGS vs DNS</h3>
+      <div class="grid g2" style="margin-top:12px">
+        <div class="card pad"><div class="kicker">RTGS · Real-Time Gross Settlement</div><ul class="clean"><li><b>Real-time:</b> each payment settles when it's processed.</li><li><b>Gross:</b> each payment settles on its own for its full amount, with no offsetting.</li><li><b>Final</b> straight away across ESAs. (Footnote 1 of the article: payments across central bank accounts on a continuous gross basis.)</li></ul></div>
+        <div class="card pad"><div class="kicker">DNS · Deferred Net Settlement</div><ul class="clean"><li><b>Deferred:</b> payments accumulate and settle at set times.</li><li><b>Net:</b> each bank's obligations are offset and only the overall difference moves.</li><li>The article describes cheques, cards and direct entry settling this way: “in aggregated batches” in RITS.</li></ul></div>
+      </div>
+      <div class="card pad gap sim">
+        <div class="play-head"><div><div class="kicker">Try it · netting calculator</div><h3>Who owes whom during a settlement window ($)</h3></div>
+          <label class="check" style="margin-top:0"><input type="checkbox" id="nFail"> Bank B fails before the batch settles</label></div>
+        <div class="tablewrap" style="margin-top:10px"><table id="nMatrix"></table></div>
+        <div class="grid g2" style="margin-top:12px;align-items:start">
+          <div><div class="kicker">Result</div><div class="tablewrap"><table id="nResult"></table></div></div>
+          <div id="nSummary"></div>
+        </div>
+      </div>
+      <div class="tablewrap gap"><table>
+        <thead><tr><th></th><th>RTGS</th><th>DNS</th></tr></thead>
+        <tbody>
+          <tr><td><b>Money banks need on hand</b></td><td>High: each payment needs funds at that moment</td><td>Low: only the net amount</td></tr>
+          <tr><td><b>Settlement and credit risk</b></td><td>None once settled</td><td>Banks are exposed to each other until the batch settles; a failure can force the batch to be recalculated or unwound</td></tr>
+          <tr><td><b>Speed for the payee</b></td><td>Funds can be released immediately</td><td>The payee's bank waits, or credits early and carries the risk</td></tr>
+          <tr><td><b>In Australia</b></td><td>High-value (HVCS/SWIFT), Austraclear, and NPP through the FSS</td><td>Cards, BECS direct entry, BPAY and cheques, settled in batches</td></tr>
+        </tbody></table></div>
+      <div class="callout gap"><div class="kicker">Context · general knowledge, not from the article</div><p>Australia moved high-value payments to RTGS when RITS began real-time settlement in 1998. Low-value systems stayed on DNS but settle more often to shrink the gap. The NPP is the break from that pattern: retail payments settled on an RTGS basis around the clock. DNS obligations still settle in RITS, as net batch amounts across ESAs.</p></div>
+    </div>
+
+    <div class="cx" data-cx="queue" hidden>
+      <h3>The RITS System Queue</h3>
+      <div class="grid g2" style="margin-top:12px;align-items:start">
+        <div class="prose" style="max-width:none">
+          <p>In RITS, payments other than NPP payments don't settle the instant they arrive. They join the <b>RITS System Queue</b>, where each is tested before it settles:</p>
+          <ol class="clean">
+            <li>A payment is submitted, for example an HVCS payment through SWIFT, an Austraclear trade, or a batch's net obligation.</li>
+            <li>It's tested: does the paying bank have enough in its RITS Allocation, and do its own payment controls allow it now?</li>
+            <li>If yes, it settles gross and final across the two ESAs.</li>
+            <li>If no, it waits and is retested as money arrives: incoming payments, or an intraday repo with the Reserve Bank.</li>
+            <li>Two payments going in opposite directions between two banks can settle together, which frees up gridlock.</li>
+            <li>Payments still unsettled at the end of the day are removed and must be resubmitted.</li>
+          </ol>
+          <p>The queue lets payments wait briefly for incoming funds instead of failing, so banks need less money on hand.</p>
+        </div>
+        <div class="card pad sim">
+          <div class="kicker">Try it · queue vs FSS (simplified)</div>
+          <div class="bal" style="margin-top:4px"><div><span>Bank A · RITS Allocation</span><b id="qBal"></b></div><div><span>Bank A · FSS Allocation</span><b id="qFss"></b></div></div>
+          <div class="kicker" style="margin-top:12px">RITS System Queue</div>
+          <div id="qList" class="flow"></div>
+          <div class="btnrow">
+            <button class="btn" id="qIn">Receive $2.0m from Bank B</button>
+            <button class="btn" id="qOff">Bank B sends A a $1.5m payment</button>
+            <button class="btn" id="qEod">End of day</button>
+            <button class="btn" id="qFssBtn">Send $1.0m NPP payment via FSS</button>
+            <button class="btn" id="qRestart">Restart</button>
+          </div>
+          <div class="log" id="qLog"></div>
+        </div>
+      </div>
+      <div class="tablewrap gap"><table>
+        <thead><tr><th></th><th>RITS System Queue</th><th>FSS</th></tr></thead>
+        <tbody>
+          <tr><td><b>Funds used</b></td><td>RITS Allocation of the ESA</td><td>FSS Allocation only</td></tr>
+          <tr><td><b>Hours</b></td><td>7.30 am–10 pm, business days</td><td>24/7/365</td></tr>
+          <tr><td><b>If funds are short</b></td><td>The payment <b>waits</b> and is retested</td><td>The payment is <b>rejected</b> at once, with no queuing and no recall</td></tr>
+          <tr><td><b>Speed</b></td><td>Varies with the queue and liquidity</td><td>Median ~50 ms</td></tr>
+        </tbody></table></div>
+      <div class="callout gap"><div class="kicker">Sources</div><p>The article says only that the FSS settles NPP payments independently of other RITS payments, which “are settled by the RITS System Queue”. The queue mechanics here (retesting, offsetting, end-of-day removal) are general knowledge of RITS and simplified. RITS has more detail, including how banks prioritise payments; check the Reserve Bank's RITS documentation for exact rules.</p><p style="margin-top:8px">The FSS doesn't queue because a customer is waiting in their banking app: an immediate settle-or-reject answer keeps an NPP payment to seconds. That's why banks keep their FSS Allocation funded with trigger points (<a href="#liquidity">play 6</a>).</p></div>
+    </div>
+  </section>
+
   <!-- QUIZ -->
   <section class="view" data-view="quiz" hidden>
     <div class="eyebrow">Check</div>
@@ -547,6 +702,7 @@ let reviewed=new Set(store.get("reviewed",[]));
 function buildIndex(){
   $("index").innerHTML=`<h4>${OTHER[0][0]}</h4>`+OTHER[0][1].map(([id,l])=>`<a href="#${id}" data-r="${id}">${l}</a>`).join("")+
     `<h4>Plays</h4>`+PLAYS.map(([id,l],i)=>`<a href="#${id}" data-r="${id}"><span class="n">${String(i+1).padStart(2,"0")}</span>${esc(l)}<span class="tick${reviewed.has(id)?" done":""}">✓</span></a>`).join("")+
+    `<h4>Concepts explained</h4>`+CX.map(([k,l])=>`<a href="#concepts-${k}" data-r="concepts-${k}">${esc(l)}</a>`).join("")+
     `<h4>${OTHER[1][0]}</h4>`+OTHER[1][1].map(([id,l])=>`<a href="#${id}" data-r="${id}">${l}</a>`).join("")+
     `<h4>Related</h4><a href="${PB_URL}#npp" target="_blank" rel="noopener">Payments playbook: NPP ↗</a><a href="${PB_URL}#bank-out" target="_blank" rel="noopener">Inside the bank: outbound ↗</a><a href="${PB_URL}#payto" target="_blank" rel="noopener">PayTo ↗</a>`;
 }
@@ -568,15 +724,87 @@ function renderStart(){
   $("startList").innerHTML=`<h3>Plays</h3><div class="grid g4" style="margin-top:10px">${PLAYS.map(([id,l],i)=>`<a class="card pad" href="#${id}" style="text-decoration:none;color:var(--ink)"><div class="kicker">Play ${String(i+1).padStart(2,"0")}${reviewed.has(id)?' · <span style="color:var(--ok)">✓ reviewed</span>':""}</div><b>${esc(l)}</b></a>`).join("")}</div>`;
 }
 function route(){
-  let h=(location.hash||"#start").slice(1); if(!document.querySelector(`[data-view="${h}"]`)) h="start";
+  let h=(location.hash||"#start").slice(1), nav=h;
+  const cm=h.match(/^concepts(?:-(\w+))?$/); if(cm){h="concepts";cxOn=CX.some(c=>c[0]===cm[1])?cm[1]:"esa";nav="concepts-"+cxOn;renderCx();}
+  if(!document.querySelector(`[data-view="${h}"]`)) h=nav="start";
   document.querySelectorAll(".view").forEach(v=>v.hidden=v.dataset.view!==h);
-  document.querySelectorAll(".index a").forEach(a=>a.classList.toggle("on",a.dataset.r===h));
+  document.querySelectorAll(".index a").forEach(a=>a.classList.toggle("on",a.dataset.r===nav));
   $("index").classList.remove("open");
   if(h==="activity") drawCharts();
   window.scrollTo(0,0);
 }
 window.addEventListener("hashchange",route);
 $("menuBtn").onclick=()=>{const o=$("index").classList.toggle("open");$("menuBtn").setAttribute("aria-expanded",o);};
+
+/* ---------- Concepts explained ---------- */
+const CX=[["esa","ESA vs suspense account"],["overlay","Overlay services"],["clearing","Clearing vs settlement"],["rtgs","RTGS vs DNS"],["queue","RITS System Queue"]];
+let cxOn="esa";
+function renderCx(){
+  $("cxTabs").innerHTML=CX.map(([k,l])=>`<button role="tab" aria-selected="${k===cxOn}" data-k="${k}">${esc(l)}</button>`).join("");
+  $("cxTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{location.hash="concepts-"+b.dataset.k;});
+  document.querySelectorAll(".cx").forEach(el=>el.hidden=el.dataset.cx!==cxOn);
+}
+/* journal stepper */
+const AUD2=new Intl.NumberFormat("en-AU",{style:"currency",currency:"AUD"});
+const JS=[
+  {t:"Before the payment",d:"The customer has $1,000. The bank's ESA at the Reserve Bank and its ESA mirror in the general ledger agree.",v:[1000,0,5000000,5000000],ch:[]},
+  {t:"1. Customer presses Pay",d:"The bank debits the customer's account $250 and credits outward NPP suspense $250. The money has left the customer but hasn't left the bank yet.",v:[750,250,5000000,5000000],ch:[0,1],j:"Dr Customer account 250 · Cr Outward NPP suspense 250"},
+  {t:"2. The FSS settles",d:"The FSS debits the bank's real ESA at the Reserve Bank by $250. The bank's own books haven't caught up yet.",v:[750,250,4999750,5000000],ch:[2]},
+  {t:"3. The bank books settlement",d:"The bank debits suspense and credits its ESA settlement account. Suspense is back to zero and the bank's books match the Reserve Bank.",v:[750,0,4999750,4999750],ch:[1,3],j:"Dr Outward NPP suspense 250 · Cr ESA settlement account 250"}
+];
+const JL=[["Customer account","At the bank"],["Outward NPP suspense","Bank's general ledger"],["ESA at the Reserve Bank","Real central bank money"],["ESA settlement account","Bank's mirror of its ESA"]];
+let jOn=0;
+function renderJ(){
+  const s=JS[jOn]; $("jTitle").textContent=s.t; $("jDesc").innerHTML=esc(s.d)+(s.j?`<br><span class="mono" style="font-size:13px">${esc(s.j)}</span>`:"");
+  $("jTiles").innerHTML=JL.map(([n,w],i)=>`<div class="${s.ch.includes(i)?"ch":""}"><span>${esc(n)}</span><b>${AUD2.format(s.v[i])}</b><small>${esc(w)}</small></div>`).join("");
+  const diff=s.v[3]-s.v[2];
+  $("jRecon").innerHTML=diff?`<div class="result bad">Reconciliation break: the general ledger mirror differs from the Reserve Bank by ${AUD2.format(diff)} until the bank books settlement.</div>`:`<div class="result ok">Reconciled: the ESA mirror matches the Reserve Bank${s.v[1]?" (suspense still holds the payment)":" and suspense is clear"}.</div>`;
+  $("jP").disabled=jOn===0; $("jN").disabled=jOn===JS.length-1;
+}
+$("jP").onclick=()=>{jOn--;renderJ();}; $("jN").onclick=()=>{jOn++;renderJ();};
+/* netting calculator */
+const NB=["A","B","C"];
+let NM=store.get("netting",[[0,100,50],[80,0,30],[60,0,0]]);
+function renderNet(){
+  const fail=$("nFail").checked;
+  $("nMatrix").innerHTML=`<thead><tr><th>Payer ↓ / Payee →</th>${NB.map(b=>`<th>Bank ${b}</th>`).join("")}</tr></thead><tbody>${NM.map((row,i)=>`<tr><td><b>Bank ${NB[i]}</b> owes</td>${row.map((v,j)=>i===j?`<td>—</td>`:`<td><input class="nin" type="number" min="0" step="10" id="n${i}${j}" data-i="${i}" data-j="${j}" value="${v}" aria-label="Bank ${NB[i]} owes Bank ${NB[j]}"></td>`).join("")}</tr>`).join("")}</tbody>`;
+  $("nMatrix").querySelectorAll("input").forEach(inp=>inp.onchange=()=>{NM[inp.dataset.i][inp.dataset.j]=Math.max(0,+inp.value||0);store.set("netting",NM);renderNet();});
+  const calc=excl=>NB.map((_,i)=>{if(excl===i)return null;let out=0,inn=0;NB.forEach((_,j)=>{if(j===excl||i===j)return;out+=NM[i][j];inn+=NM[j][i];});return {out,inn,net:inn-out};});
+  const base=calc(-1), after=fail?calc(1):null, gross=NM.flat().reduce((a,b)=>a+b,0);
+  const fmt=v=>(v>0?"+":"")+AUD0.format(v);
+  $("nResult").innerHTML=`<thead><tr><th>Bank</th><th>Pays</th><th>Receives</th><th>Net</th>${fail?"<th>Net if B fails</th>":""}</tr></thead><tbody>${base.map((r,i)=>`<tr><td>Bank ${NB[i]}</td><td>${AUD0.format(r.out)}</td><td>${AUD0.format(r.inn)}</td><td style="font-weight:600;color:var(${r.net<0?"--neg":r.net>0?"--ok":"--muted"})">${fmt(r.net)}</td>${fail?`<td>${after[i]?`<b style="color:var(${after[i].net<0?"--neg":"--ok"})">${fmt(after[i].net)}</b>`:"Failed"}</td>`:""}</tr>`).join("")}</tbody>`;
+  const netMoves=base.reduce((a,r)=>a+Math.max(0,-r.net),0);
+  let h=`<div class="stats" style="grid-template-columns:1fr 1fr"><div><b>${AUD0.format(gross)}</b><span>Moves under RTGS, one payment at a time</span></div><div><b>${AUD0.format(netMoves)}</b><span>Moves under DNS, net amounts only</span></div></div>`;
+  h+=`<p style="margin-top:10px;font-size:14px">Under RTGS, each bank needs funds for its own payments as they go, up to ${AUD0.format(Math.max(...base.map(r=>r.out)))} for the busiest payer, unless incoming payments arrive first. Under DNS, a bank only needs to cover a net debit.</p>`;
+  if(fail){const ch=[0,2].map(i=>`Bank ${NB[i]}: ${fmt(base[i].net)} → ${fmt(after[i].net)}`).join("; ");
+    h+=`<div class="result bad">Bank B fails before settlement. Its payments are taken out of the batch and the remaining positions are recalculated (${ch}). Banks that had counted on money from B now face a different, possibly larger, bill at short notice. Under RTGS, payments B had already made would have been final.</div>`;}
+  $("nSummary").innerHTML=h;
+}
+$("nFail").onchange=renderNet;
+/* queue simulator */
+let Q;
+function qStart(){Q={bal:2.5,fss:0.6,items:[{id:"Q1",to:"Bank C",amt:2.0,st:"q"},{id:"Q2",to:"Bank D",amt:1.5,st:"q"},{id:"Q3",to:"Bank B",amt:1.0,st:"q"}],log:[],offset:false,eod:false};qLog("Three RITS payments submitted. Bank A has $2.5m in its RITS Allocation.");qProcess();}
+function qLog(t){Q.log.unshift(t);}
+function qProcess(){ // test queued payments in order; skip those that can't settle
+  let moved=true; while(moved){moved=false;for(const it of Q.items){if(it.st==="q"&&Q.bal+1e-9>=it.amt){Q.bal-=it.amt;it.st="ok";moved=true;qLog(`${it.id} to ${it.to} ($${it.amt.toFixed(1)}m) settled gross. RITS Allocation $${Q.bal.toFixed(1)}m.`);}}}
+  Q.items.filter(i=>i.st==="q").forEach(i=>{if(!i.logged){qLog(`${i.id} to ${i.to} ($${i.amt.toFixed(1)}m) can't settle yet: waiting in the queue.`);i.logged=true;}});
+  qRender();
+}
+function qRender(){
+  const m=v=>"$"+v.toFixed(1)+"m";
+  $("qBal").textContent=m(Q.bal); $("qFss").textContent=m(Q.fss);
+  $("qList").innerHTML=Q.items.map(i=>`<div class="on ${i.st==="ok"?"pass":i.st==="gone"?"gone":"wait"}"><span class="ic">${i.st==="ok"?"✓":i.st==="gone"?"✕":"…"}</span><span>${i.id} · ${esc(i.to)} · ${m(i.amt)} · ${i.st==="ok"?"settled":i.st==="gone"?"removed at end of day":"queued"}</span></div>`).join("");
+  $("qLog").innerHTML=Q.log.slice(0,20).map(t=>`<div>${esc(t)}</div>`).join("");
+  ["qIn","qOff"].forEach(id=>$(id).disabled=Q.eod); $("qOff").disabled=Q.eod||Q.offset;
+}
+$("qIn").onclick=()=>{Q.bal+=2.0;qLog("Bank B pays Bank A $2.0m. RITS retests the queue.");qProcess();};
+$("qOff").onclick=()=>{Q.offset=true;const q3=Q.items.find(i=>i.id==="Q3");
+  if(q3.st==="q"){Q.bal+=1.5-1.0;q3.st="ok";qLog(`Offsetting pair: Bank B's $1.5m to A and A's queued $1.0m to B (Q3) settle together. A receives the $0.5m difference. RITS Allocation $${Q.bal.toFixed(1)}m.`);}
+  else {Q.bal+=1.5;qLog("Bank B pays Bank A $1.5m. RITS retests the queue.");}
+  qProcess();};
+$("qEod").onclick=()=>{Q.eod=true;const left=Q.items.filter(i=>i.st==="q");left.forEach(i=>i.st="gone");qLog(left.length?`End of day: ${left.map(i=>i.id).join(", ")} removed from the queue and must be resubmitted next day.`:"End of day: the queue is empty.");qRender();};
+$("qFssBtn").onclick=()=>{if(Q.fss+1e-9>=1.0){Q.fss-=1.0;qLog("NPP payment of $1.0m settled by the FSS in ~50 ms.");}else qLog(`NPP payment of $1.0m REJECTED by the FSS: FSS Allocation is $${Q.fss.toFixed(1)}m. No queue: the sender's bank must fund the FSS Allocation and the customer tries again.`);qRender();};
+$("qRestart").onclick=qStart;
 
 /* ---------- Play 1: objectives ---------- */
 const OBJ=[
@@ -850,7 +1078,10 @@ const QUIZ=[
   {q:"What availability does the Reserve Bank target for the FSS?",o:["99.5%","99.9%","99.99%","99.995%"],a:3,w:"The target is 99.995 per cent."},
   {q:"In an extreme FSS disruption, how long can the NPP keep clearing without settlement?",o:["15 minutes","1 hour","Up to 12 hours","Up to 3 days"],a:2,w:"The Basic Infrastructure can clear for up to 12 hours, storing settlement requests until the FSS is available."},
   {q:"What was the first NPP overlay service?",o:["PayTo","Osko by BPAY","Beem","PayID"],a:1,w:"Osko by BPAY. PayID is a function of the addressing service, not an overlay."},
-  {q:"How many interbank transactions had the FSS settled by end August 2018?",o:["1.9 million, worth $1.5 billion","19.4 million, worth $15.1 billion","50 million, worth $50 billion","65 million, worth $19.4 billion"],a:1,w:"19.4 million interbank transactions worth $15.1 billion. 1.9 million is the number of PayID registrations."}
+  {q:"How many interbank transactions had the FSS settled by end August 2018?",o:["1.9 million, worth $1.5 billion","19.4 million, worth $15.1 billion","50 million, worth $50 billion","65 million, worth $19.4 billion"],a:1,w:"19.4 million interbank transactions worth $15.1 billion. 1.9 million is the number of PayID registrations."},
+  {q:"Is an ESA the same as a bank's suspense account?",o:["Yes, two names for one account","No: an ESA is at the Reserve Bank; suspense is a temporary account in the bank's own books","No: suspense accounts are held at the Reserve Bank","Yes, but only for NPP payments"],a:1,w:"The ESA holds central bank money at the Reserve Bank. A suspense account is an internal general ledger account that should clear back to zero once each payment completes."},
+  {q:"What is the main trade-off of deferred net settlement compared with RTGS?",o:["It needs more money on hand but has no risk","It needs less money on hand but leaves banks exposed to each other until settlement","It is faster for payees","It removes the need for clearing"],a:1,w:"Netting saves money on hand, but until the batch settles, banks depend on each other; a failure can force the batch to be recalculated."},
+  {q:"What happens to a non-NPP RITS payment when the paying bank is short of funds?",o:["It's rejected immediately","It waits in the RITS System Queue and is retested","It's settled by the FSS instead","It's converted to a cheque"],a:1,w:"RITS payments can wait in the System Queue for incoming funds. NPP payments in the FSS are rejected instead, with no queuing."}
 ];
 let QA=store.get("quiz",{});
 function renderQuiz(){
@@ -899,13 +1130,18 @@ const GL={
   "Settlement request":"Message the payer institution's gateway sends to the FSS once clearing is complete.",
   "Sponsor participant":"An NPP participant that clears and/or settles for identified institutions.",
   "Standing Facilities":"Reserve Bank facilities that provide extra ESA funds to eligible institutions on pre-specified terms.",
+  "Suspense account":"A temporary account in a bank's own general ledger that holds a payment's value between debiting the customer and interbank settlement. Not the same as an ESA.",
+  "ESA settlement account":"A bank's mirror of its ESA in its own general ledger, reconciled daily against Reserve Bank statements.",
+  "Clearing":"Exchanging payment details between institutions and agreeing who owes whom. Not final.",
+  "Settlement":"Moving money between institutions, across ESAs, to discharge what they owe. Final and irrevocable in RITS and the FSS.",
+  "DNS":"Deferred net settlement: obligations accumulate and only net amounts settle at set times, which saves money on hand but leaves banks exposed to each other until settlement.",
   "Trigger points":"Upper and lower FSS Allocation levels that automatically move funds to or from the RITS Allocation."
 };
 function renderGl(){const q=($("gq").value||"").toLowerCase();$("glList").innerHTML=Object.keys(GL).sort((a,b)=>a.localeCompare(b)).filter(k=>!q||(k+" "+GL[k]).toLowerCase().includes(q)).map(k=>`<div><dt>${esc(k)}</dt><dd>${esc(GL[k])}</dd></div>`).join("")||`<p class="note">No matching terms.</p>`;}
 $("gq").oninput=renderGl;
 
 /* ---------- Boot ---------- */
-buildIndex(); progress(); foots(); renderStart(); renderObjs(); renderTL(); renderInfra(); renderProc(); renderSettleBal(); lSync(); lStart(); renderAccess(); renderRes(); renderQuiz(); renderGl();
+buildIndex(); progress(); foots(); renderStart(); renderObjs(); renderTL(); renderInfra(); renderProc(); renderSettleBal(); lSync(); lStart(); renderAccess(); renderRes(); renderQuiz(); renderGl(); renderCx(); renderJ(); renderNet(); qStart();
 route();
 </script>
 </body>
