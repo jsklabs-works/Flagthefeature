@@ -4,6 +4,8 @@ Status: Reference guide · Scope: Australian domestic retail, wholesale and cros
 
 > **Interactive companion:** open [`payment-lifecycle.html`](./payment-lifecycle.html) in a browser. Pick a payment type, press **▶ Play**, and watch messages and money move step by step, with a live ledger showing who ends up with what.
 
+> **Interactive playbook:** open [`payments-playbook.html`](./payments-playbook.html) for a play-by-play version of this guide. It has step-through sequence diagrams with message types, value chains, exception checklists, a rail chooser, a comparison table and a knowledge check.
+
 > **Accuracy note.** This guide describes how Australian payment systems are structured. Fees in the examples are **illustrative round numbers**, not real prices. Several policies are being reformed (RBA card-pricing and surcharging review, the end of cheques, the BECS-to-NPP migration, payments licensing). Check the current RBA, AusPayNet, AP+ and ASIC publications before relying on dates or caps.
 
 ---

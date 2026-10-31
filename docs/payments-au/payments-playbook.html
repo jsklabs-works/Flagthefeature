@@ -1,0 +1,1568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Australian Payments Playbook</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Interactive playbook for Australian payments: one play per payment type with step-through sequence diagrams, message types, value chains, exceptions, a rail chooser, comparison table and knowledge check.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: operations-manual shell. Sticky header, left index of plays, one view at a time; each play = facts, then a step-through sequence diagram with a sticky step card. */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --ink:#14212b; --muted:#566573; --line:#d6dde3; --soft:#e8edf1; --band:#eef3f6;
+  --accent:#0f6b8c; --accent-ink:#ffffff; --accent-soft:#d9edf4;
+  --msg:#2563c9; --money:#10875a; --act:#b8661a; --neg:#c23a3a; --ok:#10875a; --warn:#b8661a;
+  --person:#7558e8; --business:#cc7a24; --bank:#2563c9; --scheme:#bd3d86; --infra:#10875a; --reg:#66727e; --sys:#0f6b8c;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --shadow:0 1px 2px rgba(15,40,60,.06),0 6px 18px rgba(15,40,60,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1419; --surface:#141d24; --ink:#e4ebf0; --muted:#94a3b0; --line:#28343e; --soft:#1c2730; --band:#111a20;
+    --accent:#4fb3d6; --accent-ink:#06222c; --accent-soft:#16323d;
+    --msg:#6c9ff0; --money:#3fcb8f; --act:#eea35c; --neg:#ff7d7d; --ok:#3fcb8f; --warn:#eea35c;
+    --person:#a593ff; --business:#eea35c; --bank:#6c9ff0; --scheme:#f07cbd; --infra:#3fcb8f; --reg:#94a3b0; --sys:#4fb3d6;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1419; --surface:#141d24; --ink:#e4ebf0; --muted:#94a3b0; --line:#28343e; --soft:#1c2730; --band:#111a20;
+  --accent:#4fb3d6; --accent-ink:#06222c; --accent-soft:#16323d;
+  --msg:#6c9ff0; --money:#3fcb8f; --act:#eea35c; --neg:#ff7d7d; --ok:#3fcb8f; --warn:#eea35c;
+  --person:#a593ff; --business:#eea35c; --bank:#6c9ff0; --scheme:#f07cbd; --infra:#3fcb8f; --reg:#94a3b0; --sys:#4fb3d6;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+a{color:var(--accent)}
+code,.mono{font-family:var(--f-mono);font-size:.92em}
+h1,h2,h3{font-family:var(--f-display);letter-spacing:-.005em;text-wrap:balance;margin:0}
+h1{font-size:34px;line-height:1.1} h2{font-size:24px;line-height:1.2} h3{font-size:17px;line-height:1.3}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{display:flex;align-items:center;gap:14px;height:60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:700;font-size:18px;white-space:nowrap;text-decoration:none;color:var(--ink)}
+.brand .mark{width:26px;height:26px;border-radius:6px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font-size:12px;font-family:var(--f-mono);font-weight:600}
+.search{position:relative;flex:1;max-width:460px;margin-left:auto}
+.search input{width:100%;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:0 12px 0 34px;font:inherit;font-size:14px}
+.search svg{position:absolute;left:10px;top:11px;width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2}
+.results{position:absolute;top:44px;left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);max-height:60vh;overflow:auto;padding:6px}
+.results button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:7px 10px;cursor:pointer}
+.results button:hover,.results button.on{background:var(--soft)}
+.results small{display:block;color:var(--muted);font-size:12px}
+.progress-pill{font-size:13px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.meter{width:80px;height:6px;background:var(--soft);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.menu-btn{display:none;border:1px solid var(--line);background:var(--surface);border-radius:8px;height:38px;padding:0 12px;cursor:pointer}
+
+/* shell */
+.shell{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100vh - 60px)}
+nav.index{position:sticky;top:calc(60px + env(safe-area-inset-top,0px));height:calc(100vh - 60px - env(safe-area-inset-top,0px));overflow:auto;border-right:1px solid var(--line);background:var(--surface);padding:14px 10px 40px max(10px,env(safe-area-inset-left,0px))}
+.index h4{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:16px 10px 6px;font-weight:600}
+.index h4:first-child{margin-top:4px}
+.index a{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:14px;line-height:1.3}
+.index a:hover{background:var(--soft)}
+.index a.on{background:var(--accent-soft);color:var(--ink);font-weight:600}
+.index a .tick{margin-left:auto;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);flex:none;display:grid;place-items:center;font-size:10px;color:transparent}
+.index a .tick.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.index a .n{font-family:var(--f-mono);font-size:11px;color:var(--muted);width:20px;flex:none}
+main{min-width:0;padding-block:28px 64px;padding-left:max(16px,min(4vw,40px));padding-right:max(16px,env(safe-area-inset-right,0px),min(4vw,40px))}
+.view{max-width:1180px}
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  nav.index{position:fixed;left:0;top:calc(60px + env(safe-area-inset-top,0px));bottom:0;width:min(86vw,320px);height:auto;z-index:25;transform:translateX(-105%);transition:transform .2s;box-shadow:var(--shadow)}
+  nav.index.open{transform:none}
+  .menu-btn{display:inline-flex;align-items:center}
+  .progress-pill .label{display:none}
+  .brand span.t{display:none}
+}
+@media (max-width:520px){.progress-pill{display:none}}
+
+/* common blocks */
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.lead{font-size:16.5px;color:var(--muted);max-width:68ch;margin-top:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+.pad{padding:16px 18px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.section-gap{margin-top:28px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:4px 11px;font-size:13px;background:var(--surface);cursor:pointer;color:var(--ink)}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:14px;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+ul.clean{margin:8px 0 0;padding-left:18px} ul.clean li{margin:4px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--soft)}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.kicker{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px}
+.badge{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:99px;color:#fff}
+.badge.msg{background:var(--msg)} .badge.money{background:var(--money)} .badge.act{background:var(--act)}
+.fmt{font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--sys);border:1px solid currentColor;border-radius:4px;padding:0 5px;white-space:nowrap}
+
+/* start */
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:center}
+@media (max-width:860px){.hero{grid-template-columns:minmax(0,1fr)}}
+.stack-diagram{display:flex;flex-direction:column;gap:6px}
+.layer{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.layer b{display:block;font-family:var(--f-display);font-size:14px}
+.layer span{font-size:12.5px;color:var(--muted)}
+.layer.l4{border-color:var(--infra);background:color-mix(in srgb,var(--infra) 8%,var(--surface))}
+.route{display:block;text-decoration:none;color:var(--ink);transition:border-color .15s,transform .15s}
+.route:hover{border-color:var(--accent);transform:translateY(-1px)}
+.route h3{margin-bottom:4px}
+.route p{color:var(--muted);font-size:14px}
+.playlist{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))}
+.playlist a{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-decoration:none;color:var(--ink);font-size:14px}
+.playlist a:hover{border-color:var(--accent)}
+.playlist .st{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
+.playlist .st.done{color:var(--ok)}
+
+/* concept stepper */
+.stages{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.stages button{flex:1 1 140px;border:0;border-right:1px solid var(--line);background:none;padding:12px 10px;cursor:pointer;text-align:left}
+.stages button:last-child{border-right:0}
+.stages button .n{font-family:var(--f-mono);font-size:11px;color:var(--muted);display:block}
+.stages button b{font-family:var(--f-display);font-size:15px}
+.stages button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.stages button[aria-pressed="true"] .n{color:var(--accent-ink)}
+
+/* play */
+.play-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.play-head .actions{display:flex;gap:8px;flex-wrap:wrap}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:18px}
+.facts div{padding:10px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0}
+.facts dt{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.facts dd{margin:2px 0 0;font-size:14px;font-weight:500}
+.wc h3{font-size:15px}
+.wc.use{border-left:3px solid var(--ok)} .wc.watch{border-left:3px solid var(--warn)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-top:26px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabpanel{padding-top:18px}
+.life{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+@media (max-width:1180px){.life{grid-template-columns:minmax(0,1fr)}}
+.seqwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+svg.seq{display:block}
+.seq .lane{stroke:var(--line);stroke-dasharray:3 4}
+.seq .head rect.box{fill:var(--surface);stroke:var(--line)}
+.seq .head text.l{font-family:var(--f-display);font-weight:700;font-size:12.5px;fill:var(--ink)}
+.seq .head text.s{font-size:10.5px;fill:var(--muted)}
+.seq .phase rect{fill:var(--band)}
+.seq .phase text{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;fill:var(--muted)}
+.seq .row{cursor:pointer}
+.seq .row rect.hit{fill:transparent}
+.seq .row:hover rect.hit{fill:var(--soft)}
+.seq .row.on rect.hit{fill:var(--accent-soft)}
+.seq .row text.lab{font-size:11.5px;fill:var(--ink)}
+.seq .row text.num{font-family:var(--f-mono);font-size:10.5px;fill:var(--muted)}
+.seq .row.on text.lab{font-weight:600}
+.seq line.msg{stroke:var(--msg);stroke-width:1.8;stroke-dasharray:6 4}
+.seq line.money{stroke:var(--money);stroke-width:2.4}
+.seq rect.actbox{fill:color-mix(in srgb,var(--act) 14%,var(--surface));stroke:var(--act)}
+.seq .row.done line,.seq .row.done rect.actbox{opacity:.55}
+.stepcard{position:sticky;top:calc(76px + env(safe-area-inset-top,0px));padding:16px 18px}
+.stepcard .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.stepcard h3{font-size:19px;margin:8px 0 4px}
+.stepcard .who{font-size:13px;color:var(--muted);margin-bottom:6px}
+.stepcard .desc{font-size:14.5px}
+.msgbox{margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.msgbox .mh{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:8px 10px;background:var(--band);font-size:13px}
+.msgbox .mid{font-family:var(--f-mono);font-weight:600}
+.msgbox ul{margin:0;padding:8px 12px 10px 28px;font-family:var(--f-mono);font-size:12.3px}
+.msgbox li{margin:2px 0;overflow-wrap:anywhere}
+.termchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.term{font-size:12.5px;border:1px dashed var(--accent);color:var(--accent);background:transparent;border-radius:6px;padding:2px 8px;cursor:pointer}
+.termdef{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--soft);font-size:13.5px}
+.stepnav{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.phasebar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.vbar{display:grid;grid-template-columns:minmax(110px,180px) minmax(0,1fr) 110px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--soft);font-size:14px}
+.vbar .track{position:relative;height:14px;background:var(--soft);border-radius:4px}
+.vbar .track i{position:absolute;top:0;bottom:0;border-radius:4px}
+.vbar .track .mid{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--muted)}
+.vbar .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.pos{color:var(--money)} .neg{color:var(--neg)}
+.checklist label{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--soft);cursor:pointer}
+.checklist input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px}
+.playfoot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:30px;padding-top:18px;border-top:1px solid var(--line)}
+
+/* chooser */
+.q{margin-top:16px}
+.q .kicker{margin-bottom:8px}
+.rec{border:2px solid var(--accent)}
+.rec .score{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.alt{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--soft)}
+.alt:last-child{border-bottom:0}
+.alt .rank{font-family:var(--f-mono);font-size:12px;color:var(--muted);width:22px;flex:none;padding-top:2px}
+.meterbar{display:flex;gap:3px;margin-top:4px}
+.meterbar i{width:18px;height:5px;border-radius:2px;background:var(--soft)}
+.meterbar i.on{background:var(--accent)}
+
+/* quiz */
+.qz{padding:16px 18px}
+.qz .opts{display:grid;gap:6px;margin-top:10px}
+.qz .opts button{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 12px;cursor:pointer}
+.qz .opts button:hover{border-color:var(--accent)}
+.qz .opts button.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--surface))}
+.qz .opts button.wrong{border-color:var(--neg);background:color-mix(in srgb,var(--neg) 10%,var(--surface))}
+.qz .why{margin-top:10px;font-size:14px;color:var(--muted)}
+.scorebox{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.scorebox .big{font-family:var(--f-display);font-size:40px;font-weight:700;line-height:1}
+
+/* glossary */
+.gl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin-top:14px}
+.gl div{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.gl dt{font-weight:600}
+.gl dd{margin:3px 0 0;color:var(--muted);font-size:14px}
+.ref td:first-child{font-family:var(--f-mono);font-weight:600;color:var(--sys);white-space:nowrap}
+th.sort{cursor:pointer}
+th.sort::after{content:" ↕";color:var(--line)}
+footer.note{margin-top:40px;font-size:12.5px;color:var(--muted);max-width:80ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <button class="menu-btn" id="menuBtn" aria-label="Open contents" aria-expanded="false">☰ Contents</button>
+    <a class="brand" href="#start"><span class="mark">AU</span><span class="t">Payments Playbook</span></a>
+    <div class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input id="q" type="search" placeholder="Search plays, steps, messages, terms (e.g. pacs.002, LCR)" aria-label="Search the playbook" autocomplete="off">
+      <div class="results" id="results" hidden></div>
+    </div>
+    <div class="progress-pill" title="Plays marked as reviewed"><span class="label">Reviewed</span> <span id="progTxt">0/0</span><span class="meter"><i id="progBar"></i></span></div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="index" id="index" aria-label="Playbook contents"></nav>
+  <main id="main">
+
+    <!-- START -->
+    <section class="view" data-view="start">
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Australian payments · field guide</div>
+          <h1>Payments Playbook</h1>
+          <p class="lead">A play for every way money moves in Australia, from a tap at the café to a $2m RTGS payment. Each play gives you the facts, the step-by-step lifecycle with real message types, who earns what, and what can go wrong.</p>
+          <div class="chips" style="margin-top:18px">
+            <a class="btn primary" href="#credit">Start with the first play</a>
+            <a class="btn" href="#chooser">Help me choose a rail</a>
+            <a class="btn" href="payment-lifecycle.html" target="_blank" rel="noopener">Open the animated player ↗</a>
+          </div>
+        </div>
+        <div class="stack-diagram" aria-label="Layers of the payments system">
+          <div class="layer"><b>Payers and payees</b><span>Consumers, merchants, billers, employers, corporates</span></div>
+          <div class="layer"><b>Institutions</b><span>Banks (ADIs), card issuers and acquirers, PSPs and gateways</span></div>
+          <div class="layer"><b>Rails: clearing</b><span>Cards · BECS · NPP · BPAY · APCS · HVCS · SWIFT</span></div>
+          <div class="layer l4"><b>RBA RITS: settlement</b><span>Exchange Settlement Accounts · LVSS batches · FSS 24/7 · RTGS</span></div>
+        </div>
+      </div>
+
+      <div class="section-gap grid g4">
+        <a class="card pad route" href="#landscape"><div class="kicker">Foundations</div><h3>Who's who</h3><p>Regulators, scheme operators, rails and where settlement happens.</p></a>
+        <a class="card pad route" href="#concepts"><div class="kicker">Foundations</div><h3>Core concepts</h3><p>Push vs pull, clearing vs settlement, gross vs net, finality.</p></a>
+        <a class="card pad route" href="#chooser"><div class="kicker">Tool</div><h3>Rail chooser</h3><p>Answer four questions and get a ranked recommendation.</p></a>
+        <a class="card pad route" href="#quiz"><div class="kicker">Check</div><h3>Knowledge check</h3><p>Twelve questions with explanations. Your score is kept in this browser.</p></a>
+      </div>
+
+      <h2 class="section-gap">Plays</h2>
+      <p class="lead" style="margin-top:6px">Mark each play as reviewed when you've worked through it. Progress is saved only in this browser.</p>
+      <div id="startPlays" class="stack" style="margin-top:14px"></div>
+    </section>
+
+    <!-- LANDSCAPE -->
+    <section class="view" data-view="landscape" hidden>
+      <div class="eyebrow">Foundations</div>
+      <h2>The Australian payments landscape</h2>
+      <p class="lead">Clearing happens on many rails run by different bodies. Settlement between banks almost always ends in RITS, across Exchange Settlement Accounts at the Reserve Bank.</p>
+      <div class="section-gap grid g2">
+        <div class="card pad"><div class="kicker">Regulators and policy</div>
+          <table><tbody>
+            <tr><td><b>RBA · Payments System Board</b></td><td>Payments policy; designates systems; sets standards on interchange, surcharging and access; runs RITS.</td></tr>
+            <tr><td><b>APRA</b></td><td>Prudential regulator of ADIs (banks, credit unions, building societies).</td></tr>
+            <tr><td><b>ASIC</b></td><td>Conduct and licensing; administers the ePayments Code.</td></tr>
+            <tr><td><b>ACCC</b></td><td>Competition; enforces against excessive surcharges.</td></tr>
+            <tr><td><b>AUSTRAC</b></td><td>AML/CTF regulator; receives IFTI, threshold and suspicious matter reports.</td></tr>
+            <tr><td><b>Treasury</b></td><td>Payments legislation and the strategic plan for the payments system.</td></tr>
+          </tbody></table>
+        </div>
+        <div class="card pad"><div class="kicker">Operators and industry bodies</div>
+          <table><tbody>
+            <tr><td><b>AusPayNet</b></td><td>Industry self-regulatory body. Manages the APCS (cheques), BECS (direct entry), HVCS (high value) and IAC (cards and ATMs) frameworks.</td></tr>
+            <tr><td><b>AP+</b></td><td>Australian Payments Plus, formed in 2022 from eftpos, BPAY Group and NPP Australia.</td></tr>
+            <tr><td><b>International schemes</b></td><td>Visa, Mastercard, American Express, UnionPay, JCB.</td></tr>
+            <tr><td><b>SWIFT</b></td><td>Messaging network for HVCS and cross-border payments.</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <h3 class="section-gap">Rails and where they settle</h3>
+      <div class="tablewrap" style="margin-top:10px"><table>
+        <thead><tr><th>Rail</th><th>Operator</th><th>Clearing</th><th>Settlement in RITS</th><th>Play</th></tr></thead>
+        <tbody>
+          <tr><td>Card networks</td><td>Visa, Mastercard, eftpos (AP+)</td><td>Real-time auth; clearing files (or single message for eftpos)</td><td>Net, usually T+1, scheme batches / LVSS</td><td><a href="#credit">Credit</a> · <a href="#debit">Debit</a></td></tr>
+          <tr><td>BECS (Direct Entry)</td><td>AusPayNet framework</td><td>ABA files exchanged bilaterally over COIN</td><td>Net, several intraday LVSS sessions</td><td><a href="#becs-credit">Credit</a> · <a href="#becs-debit">Debit</a></td></tr>
+          <tr><td>NPP (Osko, PayTo)</td><td>AP+</td><td>ISO 20022 messages via Basic Infrastructure</td><td>Gross, real-time, 24/7 in FSS</td><td><a href="#npp">NPP</a> · <a href="#payto">PayTo</a></td></tr>
+          <tr><td>BPAY</td><td>AP+</td><td>Batch files by biller</td><td>Net, next business day</td><td><a href="#bpay">BPAY</a></td></tr>
+          <tr><td>APCS (cheques)</td><td>AusPayNet framework</td><td>Image exchange</td><td>Net, LVSS</td><td><a href="#cheque">Cheque</a></td></tr>
+          <tr><td>HVCS</td><td>AusPayNet framework over SWIFT</td><td>ISO 20022 via SWIFT, Y-copy</td><td>Gross, real-time (RTGS)</td><td><a href="#rtgs">RTGS</a></td></tr>
+          <tr><td>Austraclear, CHESS, PEXA</td><td>ASX, PEXA</td><td>Securities and property systems</td><td>Batch or DvP into RTGS</td><td><a href="#rtgs">RTGS</a></td></tr>
+        </tbody></table></div>
+    </section>
+
+    <!-- CONCEPTS -->
+    <section class="view" data-view="concepts" hidden>
+      <div class="eyebrow">Foundations</div>
+      <h2>Core concepts every payment shares</h2>
+      <p class="lead">Every payment is two flows travelling together: information (instructions, approvals, files) and value (money moving between accounts, finally between banks at the RBA). Select a stage to see what happens in it.</p>
+      <div class="stages section-gap" id="stages" role="group" aria-label="Payment lifecycle stages"></div>
+      <div class="card pad" id="stageBody" style="margin-top:12px"></div>
+      <h3 class="section-gap">Terms that decide how a rail behaves</h3>
+      <div class="grid g2" style="margin-top:10px">
+        <div class="card pad"><div class="kicker">Push vs pull</div><p><b>Push</b>: the payer tells their bank to send money (Osko, direct credit, BPAY). <b>Pull</b>: the payee draws money under an authority (direct debit, cards). PayTo is payee-initiated but executes as a push from the payer's bank.</p></div>
+        <div class="card pad"><div class="kicker">Clearing vs settlement</div><p><b>Clearing</b> is exchanging payment details and working out who owes whom. <b>Settlement</b> discharges those obligations by moving money between banks' ESAs.</p></div>
+        <div class="card pad"><div class="kicker">Gross vs net</div><p><b>Gross</b>: each payment settles on its own (NPP, HVCS). <b>Net</b>: obligations are offset and only the difference moves (cards, BECS, BPAY, cheques).</p></div>
+        <div class="card pad"><div class="kicker">Real-time vs deferred</div><p>Whether interbank settlement happens at the moment of the payment (NPP, 24/7) or later in batches (BECS intraday sessions, cards next business day).</p></div>
+        <div class="card pad"><div class="kicker">Finality</div><p>Settlement in RITS is final and irrevocable, protected by the <i>Payment Systems and Netting Act 1998</i>. Earlier steps (card approval, provisional credits) are not.</p></div>
+        <div class="card pad"><div class="kicker">Central bank vs commercial bank money</div><p>Your account balance is a claim on your bank. Banks settle with each other in ESA balances at the RBA.</p></div>
+      </div>
+    </section>
+
+    <!-- SETTLEMENT -->
+    <section class="view" data-view="settlement" hidden>
+      <div class="eyebrow">Foundations</div>
+      <h2>Settlement infrastructure: RITS and ESAs</h2>
+      <p class="lead">RITS is the Reserve Bank's real-time gross settlement system. Whatever rail clears a payment, the final interbank transfer happens here.</p>
+      <div class="section-gap grid g3">
+        <div class="card pad"><div class="kicker">ESA</div><p>An Exchange Settlement Account at the RBA. Held by ADIs and some approved entities. Others settle through a sponsor or agent bank such as Cuscal or Indue.</p></div>
+        <div class="card pad"><div class="kicker">RTGS engine</div><p>Settles each payment individually if the paying bank has enough ESA funds; otherwise the payment queues. Used by HVCS, Austraclear and settlement batches.</p></div>
+        <div class="card pad"><div class="kicker">LVSS</div><p>Low Value Settlement Service. Takes File Settlement Instructions for BECS, cheques, card and ATM obligations and BPAY, and settles them in scheduled net batches.</p></div>
+        <div class="card pad"><div class="kicker">FSS</div><p>Fast Settlement Service. Settles every NPP payment individually, in real time, 24/7/365, against a dedicated ESA allocation.</p></div>
+        <div class="card pad"><div class="kicker">Intraday liquidity</div><p>Banks borrow ESA funds intraday from the RBA through repurchase agreements (repos), and keep liquidity in FSS for nights and weekends.</p></div>
+        <div class="card pad"><div class="kicker">Batch feeders</div><p>CHESS (equities), PEXA (property) and card scheme batches settle in RITS so that cash moves at the same time as securities or title.</p></div>
+      </div>
+    </section>
+
+    <!-- PLAY (dynamic) -->
+    <section class="view" data-view="play" id="playView" hidden></section>
+
+    <!-- CHOOSER -->
+    <section class="view" data-view="chooser" hidden>
+      <div class="eyebrow">Tool</div>
+      <h2>Rail chooser</h2>
+      <p class="lead">Pick the situation and what matters most. The ranking updates as you go. It's a starting point for a conversation with your bank or PSP, not a pricing quote.</p>
+      <div class="grid g2 section-gap" style="align-items:start">
+        <div class="card pad" id="chooserForm"></div>
+        <div id="chooserOut" class="stack"></div>
+      </div>
+    </section>
+
+    <!-- COMPARE -->
+    <section class="view" data-view="compare" hidden>
+      <div class="eyebrow">Tool</div>
+      <h2>Compare rails</h2>
+      <p class="lead">Filter and sort the main Australian rails side by side. Select a column heading to sort.</p>
+      <div class="chips section-gap" id="cmpFilters"></div>
+      <div class="tablewrap" style="margin-top:12px"><table id="cmpTable"></table></div>
+    </section>
+
+    <!-- MESSAGES -->
+    <section class="view" data-view="messages" hidden>
+      <div class="eyebrow">Reference</div>
+      <h2>Message types</h2>
+      <p class="lead">The formats you meet along the payment chain. Field lists are simplified; each scheme and rail publishes its own message usage guidelines.</p>
+      <div class="chips section-gap" id="refTabs"></div>
+      <div class="tablewrap" style="margin-top:12px"><table class="ref" id="refTable"></table></div>
+      <h3 class="section-gap">Where each message appears in the plays</h3>
+      <div class="tablewrap" style="margin-top:10px"><table id="msgUse"></table></div>
+    </section>
+
+    <!-- RISK -->
+    <section class="view" data-view="risk" hidden>
+      <div class="eyebrow">Reference</div>
+      <h2>Regulation, risk and consumer protection</h2>
+      <div class="tablewrap section-gap"><table>
+        <thead><tr><th>Area</th><th>Instrument / body</th><th>What it covers</th></tr></thead>
+        <tbody>
+          <tr><td>Payments policy</td><td>Payment Systems (Regulation) Act 1998 · RBA Payments System Board</td><td>Designation and standards (interchange, surcharging, access). Extended by the 2024 Payments System Modernisation legislation to cover new entrants such as digital wallets.</td></tr>
+          <tr><td>Finality</td><td>Payment Systems and Netting Act 1998</td><td>Protects RTGS finality and netting if a participant becomes insolvent.</td></tr>
+          <tr><td>Prudential</td><td>APRA</td><td>Licenses and supervises ADIs; operational resilience (CPS 230).</td></tr>
+          <tr><td>Conduct</td><td>ASIC · Corporations Act · ePayments Code</td><td>Non-cash payment facility licensing, unauthorised transactions, mistaken internet payments, disclosure.</td></tr>
+          <tr><td>Credit</td><td>National Consumer Credit Protection Act</td><td>Credit cards, and low-cost BNPL since 10 June 2025.</td></tr>
+          <tr><td>AML/CTF</td><td>AUSTRAC · AML/CTF Act</td><td>Customer due diligence; IFTI, threshold ($10,000+ cash) and suspicious matter reports.</td></tr>
+          <tr><td>Competition</td><td>ACCC</td><td>Excessive surcharging enforcement, merger review.</td></tr>
+          <tr><td>Scams</td><td>Scams Prevention Framework Act 2025 · Confirmation of Payee · Scam-Safe Accord</td><td>Obligations on banks, telcos and digital platforms to prevent, detect and respond to scams.</td></tr>
+          <tr><td>Security</td><td>PCI DSS · AusPayNet IAC Code · CNP fraud framework</td><td>Card data security, PIN and terminal security, online card fraud thresholds.</td></tr>
+        </tbody></table></div>
+      <h3 class="section-gap">Where risk sits in the value chain</h3>
+      <div class="tablewrap" style="margin-top:10px"><table>
+        <thead><tr><th>Risk</th><th>Who carries it</th><th>Mitigations</th></tr></thead>
+        <tbody>
+          <tr><td>Credit</td><td>Card issuer, BNPL provider</td><td>Credit assessment, limits</td></tr>
+          <tr><td>Settlement</td><td>Banks in deferred net systems</td><td>RTGS, collateral, shorter settlement cycles</td></tr>
+          <tr><td>Liquidity</td><td>ESA holders</td><td>Intraday repos, queue management, FSS allocation</td></tr>
+          <tr><td>Fraud</td><td>Issuer (card present), merchant (online without 3DS)</td><td>EMV, tokens, 3DS, behavioural analytics</td></tr>
+          <tr><td>Merchant failure</td><td>Acquirer</td><td>Reserves, delayed payouts, monitoring</td></tr>
+          <tr><td>Scams (authorised push payments)</td><td>Payer's bank, receiving bank</td><td>PayID name display, Confirmation of Payee, holds on risky payments, mule detection</td></tr>
+          <tr><td>Operational</td><td>All participants</td><td>Resilience standards, RBA oversight, testing</td></tr>
+        </tbody></table></div>
+      <p class="lead" style="font-size:14px">Several of these areas are being reformed: the RBA's review of card pricing and surcharging, the wind-down of cheques, the BECS-to-NPP migration and payments licensing. Check current RBA, AusPayNet, AP+ and ASIC publications before relying on dates or caps.</p>
+    </section>
+
+    <!-- GLOSSARY -->
+    <section class="view" data-view="glossary" hidden>
+      <div class="eyebrow">Reference</div>
+      <h2>Glossary</h2>
+      <div class="chips section-gap" id="glLetters"></div>
+      <dl class="gl" id="glList"></dl>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="view" data-view="quiz" hidden>
+      <div class="eyebrow">Check</div>
+      <h2>Knowledge check</h2>
+      <div class="card pad section-gap scorebox"><span class="big" id="qzScore">0/12</span><span id="qzMsg" class="lead" style="margin:0">Answer each question to see the explanation.</span><button class="btn" id="qzReset" style="margin-left:auto">Clear answers</button></div>
+      <div id="qzList" class="stack" style="margin-top:14px"></div>
+    </section>
+
+    <footer class="note">Companion to the Australian payments guide (<code>docs/payments-au/README.md</code>) and the animated lifecycle player. Fees, timings and field lists are illustrative and simplified. Check current RBA, AusPayNet, AP+ and scheme documentation for actual rules.</footer>
+  </main>
+</div>
+
+<script>
+const PLAYER_URL="payment-lifecycle.html";
+/* ---------- Glossary ---------- */
+const GLOSSARY = {
+  "Acquirer":"Institution that contracts with merchants to accept cards, routes their transactions to the schemes and pays them out.",
+  "ABA file":"Fixed-width bulk file (also called a Cemtex file) used to submit direct entry credits and debits. Record types: 0 header, 1 detail, 7 file total (2 for returns).",
+  "ACS":"Access Control Server: the issuer's 3-D Secure server that decides between a frictionless and a challenge flow.",
+  "ADI":"Authorised Deposit-taking Institution (bank, building society or credit union) licensed by APRA.",
+  "AP+":"Australian Payments Plus: the operator of eftpos, BPAY and the NPP.",
+  "APCS":"Australian Paper Clearing System: AusPayNet's cheque clearing framework, using image exchange. Being wound down.",
+  "AReq / ARes":"EMV 3DS Authentication Request and Response, exchanged between the 3DS Server, the Directory Server and the ACS.",
+  "ARQC / ARPC":"Authorisation Request Cryptogram generated by the chip or token, and the Authorisation Response Cryptogram returned by the issuer. Verified and generated in an HSM.",
+  "Arbitration":"Final stage of a card dispute: the scheme rules on it and the losing party pays an arbitration fee.",
+  "AS 2805":"Australian standard for electronic funds transfer messages, based on ISO 8583. Used between terminals, acquirers, eftpos and issuers, including key management and MACs.",
+  "AUSTRAC":"Australia's AML/CTF regulator and financial intelligence unit. Receives IFTI, threshold and suspicious matter reports.",
+  "Authorisation":"Real-time approval by the issuer that confirms the card is valid and funds or credit are available, and places a hold. No money moves yet.",
+  "BASE II":"Visa's clearing system. Transactions are sent as transaction codes, for example TC05 sales draft, TC06 credit voucher (refund), TC15 chargeback.",
+  "BECS":"Bulk Electronic Clearing System (Direct Entry): batch credits and debits by BSB and account, settled net in RITS.",
+  "BIN":"Bank Identification Number: the first 6–8 digits of a card number. Identifies the scheme and the issuer.",
+  "Bitmap":"Part of an ISO 8583 message that flags which data elements (DE1–DE128) are present.",
+  "BPAY":"Bill payment scheme operated by AP+, using a Biller Code and a Customer Reference Number (CRN).",
+  "BSB":"Bank-State-Branch: a 6-digit number identifying the institution and branch. Validated against AusPayNet's BSB directory.",
+  "camt.053":"ISO 20022 bank-to-customer statement (end of day). Also used for nostro and ESA reconciliation.",
+  "camt.054":"ISO 20022 bank-to-customer debit/credit notification, sent in real time to corporates.",
+  "camt.056":"ISO 20022 request to cancel or recall a payment (a recall). Answered by camt.029.",
+  "Capture":"Finalising an authorised card transaction so it can be cleared, for example when goods ship.",
+  "Card scheme":"Network operator and rule-setter connecting acquirers and issuers, for example Visa, Mastercard, eftpos, Amex.",
+  "Chargeback":"Issuer-initiated reversal of a card transaction under scheme rules (fraud, non-delivery, duplicate, and so on).",
+  "Clearing":"Exchanging payment details between institutions and calculating who owes whom.",
+  "COIN":"Community of Interest Network: the private network banks use to exchange direct entry and other files bilaterally.",
+  "Confirmation of Payee":"Check that the account name matches the BSB and account before paying, to reduce scams and mistakes.",
+  "Core banking":"The bank's system of record for customer accounts, balances, holds and postings.",
+  "CRN":"Customer Reference Number. Identifies the customer at a BPAY biller and includes check digits.",
+  "Cryptogram":"One-time code generated by an EMV chip or token for each transaction (the ARQC), which prevents replay and cloning.",
+  "DDR":"Direct Debit Request: the authority a payer signs to let a biller debit their account through BECS.",
+  "DE User ID":"Direct Entry (APCA) User ID: the 6-digit identifier of a business authorised to lodge direct entry files.",
+  "Directory Server":"The scheme's EMV 3DS router (for example Visa Secure, Mastercard Identity Check). Passes AReq and RReq messages between the 3DS Server and the ACS.",
+  "Dishonour":"Rejection and return of a debit or cheque, for example for insufficient funds, a closed account or a stop payment.",
+  "DNDC":"Dual-network debit card: carries both eftpos and Visa or Mastercard debit.",
+  "DNS":"Deferred Net Settlement: obligations are accumulated and only net amounts are settled at set times.",
+  "Dual message":"A card flow where authorisation (0100) and clearing (a separate file) are separate. Typical of credit cards.",
+  "eftpos":"Australia's domestic debit card scheme, now part of AP+. A single-message system (0200).",
+  "EMV":"Global chip card standard. Each transaction carries a unique cryptogram.",
+  "ESA":"Exchange Settlement Account: an account at the RBA that banks use to settle with each other in central bank money.",
+  "Finality":"The point at which a payment can no longer be reversed. Settlement in RITS is final and irrevocable.",
+  "FIN Copy (Y-copy)":"SWIFT service that copies payment details to RITS (MT096) and releases the payment only after RITS authorises it (MT097). The same pattern applies to ISO 20022 HVCS messages.",
+  "FSI":"File Settlement Instruction: lodged with RITS LVSS to settle the net value of an exchanged file.",
+  "FSS":"Fast Settlement Service: the part of RITS that settles each NPP payment individually, 24/7/365.",
+  "Funding":"The acquirer or PSP paying the merchant for settled card sales, less fees.",
+  "General ledger":"The bank's accounting books. Payments move through suspense and clearing accounts before being reconciled to the ESA.",
+  "Hold":"A reservation of funds or credit created at authorisation (a memo post), replaced when the transaction clears.",
+  "HSM":"Hardware Security Module: a tamper-resistant device that stores keys and does PIN, MAC, cryptogram and signing operations.",
+  "IFTI":"International Funds Transfer Instruction: a report that must be lodged with AUSTRAC for transfers into or out of Australia.",
+  "Interchange":"Fee paid between acquirer and issuer on each four-party card transaction. Capped by RBA standards.",
+  "IPM":"Mastercard's Integrated Product Message clearing format (GCMS): 1240 presentment, 1442 chargeback, 1644 administrative, 1740 fee collection.",
+  "ISO 8583":"International message standard for card transactions. A 4-digit MTI plus a bitmap of data elements.",
+  "ISO 20022":"XML/JSON message standard used by the NPP and HVCS (pain, pacs, camt message families).",
+  "Issuer":"Institution that issues the card or holds the payer's account and approves its transactions.",
+  "LCR":"Least-cost (merchant-choice) routing: the acquirer sends a dual-network debit transaction over the cheaper network.",
+  "Liability shift":"After a successful 3-D Secure authentication (or EMV chip use), fraud losses shift from the merchant to the issuer.",
+  "LVSS":"Low Value Settlement Service: the part of RITS that settles net obligations from BECS, cheques, cards and BPAY in batches.",
+  "MAC":"Message Authentication Code: a cryptographic checksum protecting AS 2805 messages from tampering.",
+  "MCC":"Merchant Category Code: a 4-digit code describing the merchant's business.",
+  "Memo posting":"A provisional entry (such as an authorisation hold) that reduces available balance but is not yet a ledger posting.",
+  "MMS":"Mandate Management Service: the central NPP database of PayTo agreements.",
+  "MSF":"Merchant Service Fee: what the merchant pays its acquirer. Roughly interchange + scheme fees + acquirer margin.",
+  "MTI":"Message Type Indicator: the 4-digit ISO 8583 code, for example 0100 authorisation request, 0110 response, 0200 financial request, 0400 reversal, 0800 network management.",
+  "Net settlement":"Offsetting many obligations so that only the difference moves between banks.",
+  "Nostro/vostro":"Nostro: our account at your bank (in your currency). Vostro: your account at our bank.",
+  "NPP":"New Payments Platform: Australia's real-time, 24/7, data-rich account-to-account infrastructure.",
+  "NPP gateway (PAG)":"A participant's Payment Access Gateway: the connection that sends and receives signed ISO 20022 messages to and from the NPP Basic Infrastructure.",
+  "Osko":"BPAY Group's NPP overlay for fast payments.",
+  "pacs.002":"ISO 20022 payment status report. Status ACTC (technically accepted), ACCP (accepted), ACSC (settled) or RJCT (rejected, with a reason code).",
+  "pacs.004":"ISO 20022 payment return: sends the funds of a settled payment back.",
+  "pacs.008":"ISO 20022 FI-to-FI customer credit transfer: the core interbank payment message on the NPP and HVCS.",
+  "pacs.009":"ISO 20022 FI-to-FI credit transfer (bank's own payment, or the COV cover leg of a customer payment).",
+  "pain.001":"ISO 20022 customer credit transfer initiation, sent from customer to bank (often as corporate files).",
+  "pain.013":"ISO 20022 creditor payment activation request: asks the debtor's bank to make a payment (used in PayTo-style initiation).",
+  "Payment gateway":"Software and service connecting merchants (online or POS) to acquirers. It handles card capture, tokenisation, 3DS, routing, retries, reversals and reporting, often as part of a PSP.",
+  "Payment hub":"A bank's payment orchestration engine: validation, enrichment, rail selection, calls to fraud, sanctions and core banking, message building and status tracking.",
+  "PayID":"Alias (mobile number, email, ABN or Organisation ID) registered in the NPP Addressing Service against a BSB and account.",
+  "Payment initiator":"The business (or its PSP) that initiates PayTo payments under an agreement.",
+  "PayTo":"NPP service where the payer authorises a payment agreement in their banking app and the payee then initiates payments under it.",
+  "PCI DSS":"Payment Card Industry Data Security Standard for anyone storing, processing or transmitting card data.",
+  "Presentment":"Submission of a captured card transaction into clearing (Visa TC05, Mastercard IPM 1240).",
+  "PSP":"Payment Service Provider: an aggregator or gateway (for example Stripe, Adyen, Square) offering payment acceptance to merchants.",
+  "Rail selection":"The payment hub's choice of which rail to use (NPP, BECS, HVCS, SWIFT), based on amount, urgency, reachability and cost.",
+  "Reason code":"Code explaining a rejection, return or chargeback, for example ISO AC04 closed account, AM04 insufficient funds, Visa 13.1 merchandise not received.",
+  "Reconciliation":"Matching records between systems (payment hub, general ledger, RITS statements, scheme reports) and investigating breaks.",
+  "Representment":"Merchant's challenge to a chargeback, with evidence such as proof of delivery.",
+  "Response code":"ISO 8583 DE39 result: 00 approved, 05 do not honour, 51 insufficient funds, 54 expired card, 55 incorrect PIN, 91 issuer unavailable.",
+  "Reversal":"ISO 8583 0400/0420 message that cancels an authorisation (for example after a timeout) so the issuer releases the hold.",
+  "RITS":"Reserve Bank Information and Transfer System: Australia's RTGS system, where interbank obligations finally settle.",
+  "RTGS":"Real-Time Gross Settlement: each payment settles individually and immediately in central bank money.",
+  "Sanctions screening":"Checking parties against sanctions lists (for example the DFAT Consolidated List) before a payment is released.",
+  "Scheme fee":"Fee charged by a card network to issuers and acquirers for using it.",
+  "Settlement":"The final transfer of value between institutions that discharges their obligations.",
+  "Single message":"A card flow where one 0200 message both authorises and creates the financial record. Used by eftpos and ATMs.",
+  "Sponsor bank":"A bank that gives another entity access to a payment system and is responsible for that entity's items.",
+  "STIP":"Stand-In Processing: the scheme approves or declines for the issuer, within issuer-set limits, when the issuer is unavailable. An 0120 advice follows later.",
+  "Suspense account":"A general ledger account that holds a payment's value temporarily between the customer debit and interbank settlement.",
+  "SWIFT":"Global secure financial messaging network. It carries instructions, not money.",
+  "3-D Secure":"Online card authentication protocol (EMV 3DS 2.x) using the 3DS Server, the Directory Server and the issuer's ACS.",
+  "3DS Server":"The merchant-side 3DS component, usually run by the payment gateway. It builds the AReq and receives the results.",
+  "Token":"A surrogate for the card number: a gateway token (one PSP only) or a network token (issued by the scheme, used by wallets).",
+  "UETR":"Unique End-to-end Transaction Reference used to track SWIFT gpi payments.",
+  "Y-copy":"HVCS model where SWIFT sends a settlement copy to RITS and releases the payment to the beneficiary bank only after settlement."
+};
+
+/* ---------- Message reference ---------- */
+const REF = {
+  "ISO 8583 / AS 2805":[
+    ["0100 / 0110","Authorisation request / response (dual message: credit cards, card-not-present)"],
+    ["0120 / 0130","Authorisation advice (for example after scheme Stand-In Processing) / response"],
+    ["0200 / 0210","Financial transaction request / response (single message: eftpos, ATM, cash-out)"],
+    ["0220 / 0230","Financial advice: completion, offline or forced post / response"],
+    ["0400 / 0410","Reversal request / response (timeout, void, partial reversal)"],
+    ["0420 / 0430","Reversal advice / response"],
+    ["0500 / 0510","Reconciliation request / response (AS 2805 settlement totals between terminal, host and acquirer)"],
+    ["0800 / 0810","Network management: sign-on, key exchange, echo test, cut-over"],
+    ["DE2 · DE3 · DE4","PAN · processing code (00 purchase, 01 cash, 20 refund; account type) · amount"],
+    ["DE11 · DE37 · DE38","STAN (trace number) · retrieval reference number · authorisation code"],
+    ["DE18 · DE22","Merchant category code · POS entry mode (05 chip, 07 contactless, 81 e-commerce)"],
+    ["DE39","Response code: 00 approved, 05 do not honour, 51 insufficient funds, 54 expired, 55 bad PIN, 91 issuer unavailable"],
+    ["DE41 · DE42","Card acceptor terminal ID · merchant ID"],
+    ["DE52 · DE55","Encrypted PIN block · EMV chip data (ARQC, ATC, TVR, unpredictable number; ARPC in the response)"],
+    ["DE64 / DE128","MAC (message authentication code), mandatory on AS 2805 links"]
+  ],
+  "Card clearing":[
+    ["Visa TC05","BASE II sales draft (first presentment)"],
+    ["Visa TC06","Credit voucher (refund)"],
+    ["Visa TC07","Cash disbursement"],
+    ["Visa TC15–17","Chargeback versions of TC05–07"],
+    ["MC IPM 1240 / 200","First presentment"],
+    ["MC IPM 1240 / 205","Second presentment (representment)"],
+    ["MC IPM 1442 / 450","First chargeback"],
+    ["MC IPM 1644","Administrative (file header/trailer, currency updates)"],
+    ["MC IPM 1740","Fee collection"],
+    ["ARN","Acquirer Reference Number: the 23-digit ID that follows a transaction through clearing and disputes"]
+  ],
+  "EMV 3DS":[
+    ["3DS Method","Hidden iframe where the ACS collects device and browser data"],
+    ["AReq / ARes","Authentication request / response: 3DS Server → Directory Server → ACS and back. transStatus Y (authenticated), C (challenge), N (failed), A (attempted), R (rejected)"],
+    ["CReq / CRes","Challenge request / response between the shopper's browser or app and the ACS"],
+    ["RReq / RRes","Results request / response: ACS → DS → 3DS Server with the final status and CAVV/AAV"],
+    ["PReq / PRes","Preparation request / response: the 3DS Server caches card ranges from the DS"],
+    ["ECI","Electronic Commerce Indicator in the authorisation: Visa 05/06/07, Mastercard 02/01/00"]
+  ],
+  "ISO 20022":[
+    ["pain.001","Customer credit transfer initiation (customer → bank; corporate payment files)"],
+    ["pain.002","Customer payment status report (bank → customer)"],
+    ["pain.008","Customer direct debit initiation"],
+    ["pain.013 / 014","Creditor payment activation request / response (request to pay; PayTo-style initiation)"],
+    ["pacs.008","FI-to-FI customer credit transfer: the core NPP and HVCS payment message"],
+    ["pacs.009 (COV)","FI-to-FI credit transfer: a bank's own payment, or the cover leg of a customer payment"],
+    ["pacs.002","FI payment status report: ACTC, ACCP, ACSC (settled), RJCT (with reason code)"],
+    ["pacs.004","Payment return (funds sent back after settlement)"],
+    ["pacs.028","Payment status request (enquiry)"],
+    ["camt.056 / 029","Recall (cancellation) request / resolution of investigation"],
+    ["camt.052 / 053","Intraday account report / end-of-day statement (customer, nostro and ESA reconciliation)"],
+    ["camt.054","Debit/credit notification to the customer"],
+    ["Reason codes","AC01 incorrect account no., AC04 closed account, AC06 blocked, AM04 insufficient funds, AG01 transaction forbidden, BE01 name mismatch, FF01 invalid format, MS03 not specified"]
+  ],
+  "BECS (ABA)":[
+    ["Type 0","Descriptive (header) record: bank, user name, DE User ID, description, processing date"],
+    ["Type 1","Detail record: BSB, account, transaction code, amount, payee name, lodgement reference, trace BSB/account, remitter"],
+    ["Type 2","Return record: the original item returned with a reason"],
+    ["Type 7","File total record: net, credit and debit totals and item count"],
+    ["Txn code 13","Externally initiated debit (direct debit)"],
+    ["Txn codes 50–57","Credits: 50 general, 51 Australian Government security interest, 52 family allowance, 53 pay, 54 pension, 55 allotment, 56 dividend, 57 debenture/note interest"],
+    ["Return reasons","1 invalid BSB, 2 payment stopped, 3 account closed, 4 customer deceased, 5 no account / incorrect account no., 6 refer to customer, 8 invalid user ID, 9 technically invalid"],
+    ["FSI","File Settlement Instruction to RITS LVSS for the net value of the exchange"]
+  ],
+  "SWIFT MT (legacy)":[
+    ["MT103","Single customer credit transfer (now pacs.008)"],
+    ["MT202 / 202COV","Bank-to-bank transfer / cover payment (now pacs.009 / pacs.009 COV)"],
+    ["MT900 / 910","Debit / credit confirmation (now camt.054)"],
+    ["MT940 / 950","Customer / nostro statement (now camt.053)"],
+    ["MT096 / 097","FIN Copy: copy to the central institution (RITS) / authorisation to release (Y-copy)"],
+    ["Charges OUR / SHA / BEN","Who pays fees: sender, shared, or beneficiary"]
+  ]
+};
+
+/* ---------- Scenarios ---------- */
+// node types: person, business, bank, scheme, infra, reg, sys (internal system)
+// step kinds: msg (information), money (value), act (processing at a node)
+// m: message details {f: format, id, n: name, x: [key fields]}
+const N=(id,label,sub,x,y,type)=>({id,label,sub,x,y,type});
+const M=(f,id,n,x)=>({f,id,n,x:x||[]});
+const SCENARIOS = [
+/* ===================== CARDS ===================== */
+{
+  id:"credit", group:"Cards", name:"Credit card · in store (via POS gateway)", amount:"$100.00 · four-party scheme · dual message",
+  summary:"A cardholder taps a Visa credit card at a café. The transaction goes from the terminal to a payment gateway (terminal host), then the acquirer, the scheme and the issuer. Clearing happens at end of day and settlement next business day in RITS. Every hop names its message type: EMV, AS 2805, ISO 8583, BASE II.",
+  nodes:[N("ch","Cardholder","Credit card / phone",90,90,"person"),N("pos","Merchant POS","Café · EMV terminal",90,450,"business"),
+         N("gw","Payment gateway","Terminal host / switch",330,290,"sys"),N("acq","Acquirer","Merchant's bank",570,450,"bank"),
+         N("sch","Card scheme","VisaNet",730,270,"scheme"),N("iss","Issuer","Cardholder's bank",910,90,"bank"),
+         N("rits","RBA · RITS","ESAs at the RBA",910,450,"infra")],
+  ledger:["ch","pos","acq","sch","iss"], names:{pos:"Merchant"},
+  steps:[
+    {p:"Authorisation",f:"ch",t:"pos",k:"msg",l:"Tap card",d:"The cardholder taps for $100. The card (or phone) and terminal run the EMV contactless dialogue. In Australia no PIN is needed up to the $200 contactless limit. A phone wallet verifies the user with biometrics (CDCVM).",
+      m:M("EMV contactless","GENERATE AC","Card ↔ terminal dialogue",["SELECT AID (Visa credit)","GET PROCESSING OPTIONS → AIP/AFL","READ RECORD (PAN or token, expiry)","Terminal risk mgmt: floor limit, CVM rules","GENERATE AC → ARQC cryptogram (online)"]),terms:["EMV","ARQC / ARPC","Token"]},
+    {p:"Authorisation",f:"pos",t:"gw",k:"msg",l:"Auth request",d:"The terminal sends an AS 2805 message to its terminal host, or to a payment gateway that connects integrated POS systems to acquirers. The PIN block (if any) and the MAC are protected under keys exchanged at sign-on.",
+      m:M("AS 2805","0100","Authorisation request (terminal → host)",["Track-2 equivalent / token","Processing code 00 (purchase)","Amount 100.00 AUD","STAN, terminal ID, merchant ID","POS entry mode 07 (contactless)","EMV data incl. ARQC","MAC (DE64)"]),terms:["AS 2805","Payment gateway","MAC"]},
+    {p:"Authorisation",f:"gw",t:"gw",k:"act",l:"Validate & route",d:"The gateway checks the MAC and translates keys in its HSM (terminal key to acquirer zone key). It looks up which acquirer serves this merchant, applies duplicate and velocity checks, and logs the transaction for end-of-day reconciliation.",terms:["HSM","Payment gateway"]},
+    {p:"Authorisation",f:"gw",t:"acq",k:"msg",l:"Forward",d:"The gateway forwards the request to the acquirer's authorisation host.",
+      m:M("AS 2805 / ISO 8583","0100","Authorisation request",["DE2 PAN/token · DE3 000000","DE4 000000010000 · DE11 STAN","DE18 MCC 5814 (fast food)","DE22 071 · DE41/42 TID/MID","DE55 ICC data"]),terms:["ISO 8583","MTI","MCC"]},
+    {p:"Authorisation",f:"acq",t:"acq",k:"act",l:"Acquirer checks",d:"The acquirer validates the merchant (active, within limits, MCC allowed). It identifies the network from the BIN (Visa credit) and converts the message to the scheme's ISO 8583 variant.",terms:["BIN","Acquirer"]},
+    {p:"Authorisation",f:"acq",t:"sch",k:"msg",l:"Auth request",d:"The request goes onto the scheme network.",
+      m:M("ISO 8583 (Visa V.I.P.)","0100","Authorisation request",["Scheme-specific field layouts","DE32 acquiring institution ID","DE37 retrieval reference number"])},
+    {p:"Authorisation",f:"sch",t:"sch",k:"act",l:"Scheme services",d:"The scheme validates the message, swaps a wallet token for the real PAN (detokenisation), runs network fraud scoring and routes by BIN to the issuer. If the issuer doesn't answer in time, Stand-In Processing can decide on its behalf.",terms:["Token","STIP"]},
+    {p:"Authorisation",f:"sch",t:"iss",k:"msg",l:"Auth request",d:"The request arrives at the issuer's card switch. See the 'Inside the issuer' scenario for what happens next.",m:M("ISO 8583","0100","Authorisation request")},
+    {p:"Authorisation",f:"iss",t:"iss",k:"act",l:"Approve + hold",d:"The HSM verifies the ARQC. The authorisation host checks card status and limits, the fraud engine scores the transaction, and the ledger places a $100 hold (a memo post). No money has moved yet.",terms:["Authorisation","Hold","HSM"]},
+    {p:"Authorisation",f:"iss",t:"sch",k:"msg",l:"Approved",d:"The approval goes back with an auth code and the issuer's ARPC cryptogram for the card.",
+      m:M("ISO 8583","0110","Authorisation response",["DE38 auth code 7Q2K9A","DE39 response code 00 (approved)","DE55 ARPC"]),terms:["Response code"]},
+    {p:"Authorisation",f:"sch",t:"acq",k:"msg",l:"Approved",d:"Back to the acquirer.",m:M("ISO 8583","0110","Authorisation response")},
+    {p:"Authorisation",f:"acq",t:"gw",k:"msg",l:"Approved",d:"Back to the gateway.",m:M("AS 2805","0110","Authorisation response")},
+    {p:"Authorisation",f:"gw",t:"pos",k:"msg",l:"APPROVED ✓",d:"The terminal shows APPROVED about 1–2 seconds after the tap. If no response had arrived within the timeout, the terminal or gateway would send a reversal so the issuer releases the hold.",
+      m:M("AS 2805","0110","Authorisation response",["Response code 00","Auth code","MAC"]),terms:["Reversal"]},
+    {p:"Clearing",f:"pos",t:"gw",k:"msg",l:"Settlement totals",d:"At cut-off the terminal 'settles': it exchanges counts and totals with the host so both sides agree on the day's transactions.",
+      m:M("AS 2805","0500","Reconciliation request",["Number and value of purchases and refunds","Settlement date","Terminal ID"])},
+    {p:"Clearing",f:"gw",t:"acq",k:"msg",l:"Capture file",d:"The gateway sends the day's approved transactions to the acquirer.",m:M("File","Capture file","Daily captured transactions",["One record per approved sale","Auth code, STAN and RRN for matching"]),terms:["Capture"]},
+    {p:"Clearing",f:"acq",t:"sch",k:"msg",l:"Clearing",d:"The acquirer submits presentments to the scheme. (Mastercard equivalent: IPM 1240 First Presentment through GCMS.)",
+      m:M("Visa BASE II","TC05","Sales draft (first presentment)",["ARN (acquirer reference number)","Final amount, auth code","Interchange qualification data"]),terms:["Presentment","BASE II","IPM"]},
+    {p:"Clearing",f:"sch",t:"iss",k:"msg",l:"Clearing record",d:"The issuer matches the record to the authorisation hold and posts the $100 to the card account.",m:M("Visa BASE II","TC05","Sales draft")},
+    {p:"Settlement",f:"sch",t:"sch",k:"act",l:"Net positions",d:"The scheme nets each member's transactions for the day, applies interchange ($0.50 here, paid to the issuer) and scheme fees, and sends settlement reports.",m:M("Report","VSS reports","Visa settlement reports to members"),terms:["Interchange","Net settlement","Scheme fee"]},
+    {p:"Settlement",f:"iss",t:"rits",k:"money",l:"Pays $99.50",d:"The issuer's ESA at the RBA is debited for its net obligation in the scheme's settlement batch.",m:M("RITS","Batch / FSI","Scheme settlement",["Net amount per member","Settlement date"]),terms:["ESA","RITS"],led:{iss:-99.5}},
+    {p:"Settlement",f:"rits",t:"acq",k:"money",l:"Credit $99.50",d:"The acquirer's ESA is credited. Settlement is final.",terms:["Finality"],led:{acq:99.5}},
+    {p:"Settlement",f:"acq",t:"sch",k:"money",l:"Scheme fee $0.08",d:"Acquirer scheme fees.",led:{acq:-0.08,sch:0.08}},
+    {p:"Settlement",f:"iss",t:"sch",k:"money",l:"Scheme fee $0.05",d:"Issuer scheme fees.",led:{iss:-0.05,sch:0.05}},
+    {p:"Funding",f:"acq",t:"pos",k:"money",l:"Payout $98.80",d:"The acquirer deposits the day's takings less a 1.2% MSF ($1.20) into the merchant's account. Some acquirers bill the MSF monthly instead.",m:M("BECS / NPP","Direct credit","Merchant settlement deposit",["Descriptor: MERCHANT SETTLEMENT","Daily total less MSF"]),terms:["MSF","Funding"],led:{acq:-98.8,pos:98.8}},
+    {p:"Billing",f:"iss",t:"ch",k:"msg",l:"Statement",d:"Monthly statement. No interest is charged if it is paid in full by the due date."},
+    {p:"Billing",f:"ch",t:"iss",k:"money",l:"Repays $100",d:"Final value chain: merchant $98.80, acquirer $0.62, issuer $0.45, scheme $0.13.",m:M("BPAY / NPP / direct debit","Repayment","Card repayment"),led:{ch:-100,iss:100}}
+  ]
+},
+{
+  id:"issuer", group:"Cards", isNew:true, name:"Inside the issuer · card authorisation", amount:"0100 in → 0110 out in ~200 ms, then clearing and settlement",
+  summary:"Zooms into the issuing bank: the card switch, HSM, authorisation host, fraud engine and core ledger that approve a card payment in milliseconds, then the back-office clearing, settlement and reconciliation the next day. No money moves in this view, so the ledger stays empty.",
+  zones:[{x:225,y:20,w:765,h:500,label:"Inside the issuing bank"}],
+  nodes:[N("sch","Card scheme","VisaNet / eftpos",100,270,"scheme"),N("sw","Card switch","Front end · ISO 8583",330,270,"sys"),
+         N("hsm","HSM","Keys · cryptograms",330,450,"sys"),N("auth","Auth host","Card management",570,270,"sys"),
+         N("fraud","Fraud engine","Real-time scoring",570,90,"sys"),N("core","Core ledger","Card account",810,270,"sys"),
+         N("notif","Notifications","Push / SMS",810,90,"sys"),N("clr","Card back office","Clearing & settlement",570,450,"sys"),
+         N("gl","General ledger","Treasury & recon",810,450,"sys")],
+  ledger:[],
+  steps:[
+    {p:"Receive",f:"sch",t:"sw",k:"msg",l:"Auth request",d:"The issuer's front-end card switch receives a $100 contactless purchase from the scheme.",
+      m:M("ISO 8583","0100","Authorisation request",["DE2 PAN · DE14 expiry","DE3 processing code · DE4 amount","DE18 MCC · DE22 entry mode 07","DE52 PIN block (if PIN used)","DE55 ARQC, ATC, TVR, unpredictable no."]),terms:["ISO 8583","MTI"]},
+    {p:"Receive",f:"sw",t:"sw",k:"act",l:"Parse & normalise",d:"The switch decodes the bitmap and data elements, checks the format, de-duplicates on STAN and RRN, assigns an internal trace ID, and maps the message to the bank's internal format.",terms:["Bitmap"]},
+    {p:"Security",f:"sw",t:"hsm",k:"msg",l:"Verify ARQC",d:"Cryptographic checks run inside the HSM, so keys never leave secure hardware.",
+      m:M("HSM command","ARQC verify","Cryptogram and PIN verification",["Derive card key from issuer master key + PAN","Verify ARQC over amount, currency, date, ATC, UN","Verify PIN block / dCVV / CVV2 if present","Generate ARPC for the response"]),terms:["HSM","ARQC / ARPC"]},
+    {p:"Security",f:"hsm",t:"sw",k:"msg",l:"Valid + ARPC",d:"The cryptogram is genuine and the ATC has not been replayed."},
+    {p:"Decision",f:"sw",t:"auth",k:"msg",l:"Authorise",d:"The switch passes the request to the authorisation host.",m:M("Internal API","AuthRequest","Canonical authorisation request")},
+    {p:"Decision",f:"auth",t:"auth",k:"act",l:"Card & rule checks",d:"The host checks that the card is active, not reported lost or stolen, and not expired. It also checks token status, velocity limits, MCC and country blocks, customer card controls (for example 'block online') and daily limits."},
+    {p:"Decision",f:"auth",t:"fraud",k:"msg",l:"Score",d:"The fraud engine gets the transaction plus behavioural features.",m:M("API","ScoreRequest","Real-time fraud score",["Amount, MCC, merchant, location","Device / token / wallet data","Customer history and velocity features"])},
+    {p:"Decision",f:"fraud",t:"auth",k:"msg",l:"Score 12 (low)",d:"A machine-learning model returns a risk score within milliseconds. A high score would decline the transaction or trigger an SMS or in-app check."},
+    {p:"Decision",f:"auth",t:"core",k:"msg",l:"Check & hold",d:"The host checks available credit and places a hold, which reduces available balance without posting to the ledger.",
+      m:M("Internal","Memo post","Available-balance check + hold",["Open-to-buy = limit − balance − holds","Place $100 hold, expires if unmatched in ~7 days"]),terms:["Memo posting","Hold","Core banking"]},
+    {p:"Decision",f:"core",t:"auth",k:"msg",l:"Hold placed",d:""},
+    {p:"Respond",f:"auth",t:"sw",k:"msg",l:"Approve 00",d:"The decision and auth code go to the switch."},
+    {p:"Respond",f:"sw",t:"sch",k:"msg",l:"Approved",d:"Time spent inside the issuer is typically around 100–300 ms. A decline uses another response code, for example 51 insufficient funds, 05 do not honour, 54 expired card or 55 incorrect PIN. If the issuer is down, the scheme's STIP decides and later sends an 0120 advice.",
+      m:M("ISO 8583","0110","Authorisation response",["DE38 auth code","DE39 = 00","DE55 ARPC"]),terms:["Response code","STIP"]},
+    {p:"Respond",f:"auth",t:"notif",k:"msg",l:"Spend alert",d:"Push notification: '$100.00 at Café, Sydney'. It is sent once the card is approved, not when the transaction clears."},
+    {p:"Clearing (T+1)",f:"sch",t:"clr",k:"msg",l:"Clearing file",d:"Next day the scheme sends the presentments. The final amount can differ from the authorised amount, for example because of tips or partial shipment.",
+      m:M("Visa BASE II / MC IPM","TC05 / 1240","First presentment",["ARN","Final amount, auth code","Interchange rate applied"]),terms:["BASE II","IPM","Presentment"]},
+    {p:"Clearing (T+1)",f:"clr",t:"clr",k:"act",l:"Match to hold",d:"The back office matches each presentment to its authorisation by auth code, amount and card. Holds that are never matched expire. Presentments with no authorisation (force posts) are flagged for review."},
+    {p:"Clearing (T+1)",f:"clr",t:"core",k:"msg",l:"Post transaction",d:"The memo hold is replaced by a real ledger posting, and the transaction appears on the statement.",m:M("Internal","Posting","Financial posting",["Release hold","Post purchase $100.00"])},
+    {p:"Settlement",f:"sch",t:"clr",k:"msg",l:"Settlement report",d:"The scheme reports the net amount the issuer owes for the day.",m:M("Report","VSS / MC settlement","Net settlement report",["Net settlement amount","Interchange earned","Scheme fees"])},
+    {p:"Settlement",f:"clr",t:"gl",k:"msg",l:"GL entries",d:"Accounting entries record the receivable, the settlement obligation and interchange income.",m:M("Internal","Journal","General ledger posting",["Dr Cardholder receivables 100.00","Cr Scheme settlement a/c 99.50","Cr Interchange income 0.50"]),terms:["General ledger"]},
+    {p:"Settlement",f:"gl",t:"gl",k:"act",l:"Fund & reconcile",d:"Treasury makes sure the ESA can cover the scheme's settlement batch in RITS. Operations then reconcile the RITS statement, the scheme report and the general ledger, and investigate any breaks.",terms:["ESA","Reconciliation"]}
+  ]
+},
+{
+  id:"debit", group:"Cards", name:"Debit · eftpos with least-cost routing", amount:"$100.00 · dual-network debit card · single message",
+  summary:"A dual-network debit card carries both eftpos and Visa/Mastercard debit. The acquirer's least-cost routing sends the tap over eftpos. eftpos is a single-message system: one AS 2805 0200 message both authorises the payment and creates the financial record, so there is no separate clearing file.",
+  nodes:[N("ch","Cardholder","Dual-network debit",90,90,"person"),N("pos","Merchant POS","Supermarket",90,450,"business"),
+         N("acq","Acquirer","with LCR engine",390,450,"bank"),N("eft","eftpos","AP+ network",650,300,"scheme"),
+         N("intl","Visa / MC debit","alternative route",560,90,"scheme"),
+         N("iss","Issuer","Cardholder's bank",910,90,"bank"),N("rits","RBA · RITS","ESAs at the RBA",910,450,"infra")],
+  extraLinks:[["acq","intl"],["intl","iss"]],
+  ledger:["ch","pos","acq","eft","iss"], names:{pos:"Merchant"},
+  steps:[
+    {p:"Authorisation",f:"ch",t:"pos",k:"msg",l:"Tap debit card",d:"A contactless tap for $100. The card holds two payment applications (AIDs): eftpos and Visa Debit.",m:M("EMV contactless","SELECT AID","Application selection",["Card lists eftpos AID + Visa Debit AID","Terminal can prefer eftpos (merchant routing)"]),terms:["DNDC","EMV"]},
+    {p:"Authorisation",f:"pos",t:"acq",k:"msg",l:"Financial request",d:"A single-message request goes to the acquirer. If the card had been inserted with PIN, the account type (CHQ/SAV) selected at the terminal would appear in the processing code.",
+      m:M("AS 2805","0200","Financial transaction request",["Processing code 00 + account type","Amount 100.00 (+ cash-out amount if any)","EMV data · PIN block if PIN","MAC"]),terms:["AS 2805","Single message"]},
+    {p:"Authorisation",f:"acq",t:"acq",k:"act",l:"Least-cost routing",d:"The acquirer's LCR engine compares the cost of each network for this merchant and picks eftpos. Without LCR the tap would go over the international network, shown dotted.",terms:["LCR"]},
+    {p:"Authorisation",f:"acq",t:"eft",k:"msg",l:"Route via eftpos",d:"The request goes to the eftpos hub.",m:M("AS 2805","0200","Financial transaction request"),terms:["eftpos"]},
+    {p:"Authorisation",f:"eft",t:"iss",k:"msg",l:"Forward",d:"eftpos switches it to the issuer.",m:M("AS 2805","0200","Financial transaction request")},
+    {p:"Authorisation",f:"iss",t:"iss",k:"act",l:"Debit account",d:"Because this is single-message, the issuer treats the request as final. It verifies the cryptogram and PIN in its HSM, checks the balance, and debits the transaction account.",terms:["HSM"],led:{ch:-100,iss:100}},
+    {p:"Authorisation",f:"iss",t:"eft",k:"msg",l:"Approved",d:"",m:M("AS 2805","0210","Financial transaction response",["Response code 00","Auth / approval code","MAC"]),terms:["Response code"]},
+    {p:"Authorisation",f:"eft",t:"acq",k:"msg",l:"Approved",d:"",m:M("AS 2805","0210","Financial transaction response")},
+    {p:"Authorisation",f:"acq",t:"pos",k:"msg",l:"APPROVED ✓",d:"Approved in about a second. If the response is lost, the terminal sends an 0420 reversal advice to undo the debit.",m:M("AS 2805","0210","Financial transaction response"),terms:["Reversal"]},
+    {p:"Reconciliation",f:"pos",t:"acq",k:"msg",l:"Settlement totals",d:"At end of day the terminal and acquirer agree totals.",m:M("AS 2805","0500","Reconciliation request",["Debit count/value","Credit (refund) count/value"])},
+    {p:"Reconciliation",f:"eft",t:"eft",k:"act",l:"Net + interchange",d:"The 0200 already carried the financial record, so there's no clearing file. eftpos totals each member's position and applies a flat 4c interchange to the issuer.",terms:["Interchange","Net settlement"]},
+    {p:"Settlement",f:"iss",t:"rits",k:"money",l:"Pays $99.96",d:"The issuer's ESA is debited for the amount less interchange.",m:M("RITS","Settlement batch","eftpos net settlement"),terms:["ESA"],led:{iss:-99.96}},
+    {p:"Settlement",f:"rits",t:"acq",k:"money",l:"Credit $99.96",d:"The acquirer's ESA is credited.",led:{acq:99.96}},
+    {p:"Settlement",f:"acq",t:"eft",k:"money",l:"Fee $0.03",d:"Acquirer scheme fee.",led:{acq:-0.03,eft:0.03}},
+    {p:"Settlement",f:"iss",t:"eft",k:"money",l:"Fee $0.02",d:"Issuer scheme fee.",led:{iss:-0.02,eft:0.02}},
+    {p:"Funding",f:"acq",t:"pos",k:"money",l:"Payout $99.70",d:"The merchant receives $99.70 (an MSF of $0.30). Compare this with the $1.20 for credit. This difference is the reason for least-cost routing.",terms:["MSF"],led:{acq:-99.7,pos:99.7}}
+  ]
+},
+{
+  id:"online", group:"Cards", name:"Online · payment gateway, 3-D Secure, tokens", amount:"$100.00 · card-not-present · EMV 3DS 2.x",
+  summary:"An online purchase through a payment gateway. The gateway is the merchant's single integration point: it captures the card in hosted fields, gets a network token, runs EMV 3-D Secure (AReq → ARes → CReq → RReq), sends the authorisation to the acquirer, handles capture and reversals, and pays the merchant out.",
+  nodes:[N("sh","Shopper","Browser / app",90,90,"person"),N("web","Merchant","Web store server",90,450,"business"),
+         N("gw","Payment gateway","PSP · 3DS Server · vault",330,280,"sys"),N("acs","Issuer ACS","3-D Secure",330,70,"bank"),
+         N("ds","Directory Server","Scheme 3DS router",600,70,"scheme"),N("acq","Acquirer","Gateway's acquirer",530,450,"bank"),
+         N("sch","Card scheme","Network · token service",730,300,"scheme"),N("iss","Issuer","Shopper's bank",910,170,"bank"),
+         N("rits","RBA · RITS","ESAs at the RBA",910,450,"infra")],
+  ledger:["sh","web","gw","acq","sch","iss"], names:{gw:"Gateway / PSP"},
+  steps:[
+    {p:"Checkout",f:"sh",t:"web",k:"msg",l:"Checkout $100",d:"The shopper clicks Pay.",m:M("HTTPS","POST /checkout","Browser → merchant")},
+    {p:"Checkout",f:"web",t:"gw",k:"msg",l:"Create payment",d:"The merchant's server calls the gateway's API. The idempotency key makes retries safe, so a network blip cannot charge the shopper twice.",
+      m:M("Gateway API (REST/JSON)","POST /payments","Create payment intent",["amount: 10000, currency: AUD","merchant_account, order_ref","return_url (for 3DS challenge)","Idempotency-Key header"]),terms:["Payment gateway","PSP"]},
+    {p:"Checkout",f:"sh",t:"gw",k:"msg",l:"Card in hosted fields",d:"The card details go straight from the browser to the gateway through an iframe. The merchant never sees the card number, which keeps it mostly out of PCI DSS scope.",
+      m:M("HTTPS (iframe)","Hosted fields","Card capture",["PAN, expiry, CVV2 → gateway only","Merchant gets a payment-method reference","PCI DSS scope: SAQ A"]),terms:["PCI DSS"]},
+    {p:"Checkout",f:"gw",t:"sch",k:"msg",l:"Request network token",d:"The gateway vaults the card and asks the scheme's token service for a network token. The token stays valid when the plastic card is reissued.",
+      m:M("Token service API","Provision token","VTS / MDES token request",["Encrypted PAN","Token requestor ID","Returns token + token expiry"]),terms:["Token"]},
+    {p:"Checkout",f:"sch",t:"gw",k:"msg",l:"Token issued",d:"For each transaction the gateway will ask the token service for a token cryptogram."},
+    {p:"Authentication",f:"gw",t:"gw",k:"act",l:"3DS Method",d:"Acting as 3DS Server, the gateway runs the 3DS Method: a hidden iframe lets the ACS collect device fingerprint data before authentication.",m:M("EMV 3DS","3DS Method","Device data collection"),terms:["3DS Server"]},
+    {p:"Authentication",f:"gw",t:"ds",k:"msg",l:"AReq",d:"The authentication request goes to the scheme's Directory Server.",
+      m:M("EMV 3DS 2.x","AReq","Authentication Request",["Card/token, amount, currency","Merchant name, MCC, acquirer BIN","~100 browser/device data elements","Billing/shipping address, account age"]),terms:["AReq / ARes","Directory Server","3-D Secure"]},
+    {p:"Authentication",f:"ds",t:"acs",k:"msg",l:"AReq",d:"The DS routes it to the issuer's ACS by card range."},
+    {p:"Authentication",f:"acs",t:"acs",k:"act",l:"Risk-based auth",d:"The ACS scores the transaction and decides between frictionless (status Y) and challenge (status C). This one is a new device and a large basket, so it chooses a challenge.",terms:["ACS"]},
+    {p:"Authentication",f:"acs",t:"ds",k:"msg",l:"ARes (C)",d:"",m:M("EMV 3DS 2.x","ARes","Authentication Response",["transStatus = C (challenge)","acsURL, acsTransID"])},
+    {p:"Authentication",f:"ds",t:"gw",k:"msg",l:"ARes (C)",d:"The gateway tells the browser to open the challenge."},
+    {p:"Authentication",f:"acs",t:"sh",k:"msg",l:"Challenge",d:"The browser posts a CReq to the ACS. The issuer sends a push notification to the banking app (out-of-band authentication).",m:M("EMV 3DS 2.x","CReq / CRes","Challenge request / response",["Browser POSTs CReq to acsURL","OOB: approve in banking app","CRes returned to merchant page"])},
+    {p:"Authentication",f:"sh",t:"acs",k:"msg",l:"Approve in app",d:"The shopper approves with Face ID."},
+    {p:"Authentication",f:"acs",t:"ds",k:"msg",l:"RReq",d:"The ACS reports the final result.",
+      m:M("EMV 3DS 2.x","RReq / RRes","Results Request / Response",["transStatus = Y","authenticationValue (CAVV)","ECI 05 (Visa)"]),terms:["Liability shift"]},
+    {p:"Authentication",f:"ds",t:"gw",k:"msg",l:"RReq → RRes",d:"The gateway now holds a CAVV. Fraud liability has shifted to the issuer."},
+    {p:"Authorisation",f:"gw",t:"acq",k:"msg",l:"Auth request",d:"The gateway sends the authorisation with the token, the token cryptogram and the 3DS proof.",
+      m:M("ISO 8583 / acquirer API","0100","Authorisation request",["DE2 network token + token cryptogram","DE22 entry mode 81 (e-commerce)","ECI 05 + CAVV","CVV2 (first use)"]),terms:["ISO 8583"]},
+    {p:"Authorisation",f:"acq",t:"sch",k:"msg",l:"Auth request",d:"",m:M("ISO 8583","0100","Authorisation request")},
+    {p:"Authorisation",f:"sch",t:"sch",k:"act",l:"Detokenise",d:"The scheme validates the token cryptogram, maps the token to the real PAN, and checks the CAVV."},
+    {p:"Authorisation",f:"sch",t:"iss",k:"msg",l:"Auth request",d:"",m:M("ISO 8583","0100","Authorisation request (with PAN)")},
+    {p:"Authorisation",f:"iss",t:"iss",k:"act",l:"Approve + hold",d:"The issuer approves and holds $100 of credit.",terms:["Hold"]},
+    {p:"Authorisation",f:"iss",t:"sch",k:"msg",l:"Approved",d:"",m:M("ISO 8583","0110","Authorisation response",["DE39 = 00","DE38 auth code"])},
+    {p:"Authorisation",f:"sch",t:"acq",k:"msg",l:"Approved",d:"",m:M("ISO 8583","0110","Authorisation response")},
+    {p:"Authorisation",f:"acq",t:"gw",k:"msg",l:"Approved",d:"",m:M("ISO 8583","0110","Authorisation response")},
+    {p:"Authorisation",f:"gw",t:"web",k:"msg",l:"Webhook: authorised",d:"The merchant shows the order confirmation. Funds are only reserved.",m:M("Gateway webhook","payment.authorised","Event notification",["payment_id, status","3DS outcome, risk score","Signed with webhook secret"])},
+    {p:"Capture",f:"web",t:"gw",k:"msg",l:"Capture",d:"Two days later the goods ship and the merchant captures the payment. If the order were cancelled first, the gateway would void it, which reverses the authorisation.",m:M("Gateway API","POST /payments/{id}/capture","Capture",["amount (≤ authorised)"]),terms:["Capture"]},
+    {p:"Capture",f:"gw",t:"gw",k:"act",l:"Timeouts & retries",d:"Gateways handle exceptions: an 0400 reversal if an auth response times out, retry logic for soft declines, and later refunds (Visa TC06) or partial captures.",terms:["Reversal"]},
+    {p:"Clearing",f:"gw",t:"acq",k:"msg",l:"Capture batch",d:"Captured payments go to the acquirer.",m:M("File / API","Capture batch","Captured transactions")},
+    {p:"Clearing",f:"acq",t:"sch",k:"msg",l:"Presentment",d:"",m:M("Visa BASE II / MC IPM","TC05 / 1240","First presentment"),terms:["Presentment"]},
+    {p:"Clearing",f:"sch",t:"iss",k:"msg",l:"Clearing record",d:"The issuer posts the transaction.",m:M("Visa BASE II","TC05","Sales draft")},
+    {p:"Settlement",f:"iss",t:"rits",k:"money",l:"Pays $99.50",d:"The issuer settles the amount less 0.5% interchange from its ESA.",terms:["Interchange","ESA"],led:{iss:-99.5}},
+    {p:"Settlement",f:"rits",t:"acq",k:"money",l:"Credit $99.50",d:"The acquirer's ESA is credited.",led:{acq:99.5}},
+    {p:"Settlement",f:"acq",t:"sch",k:"money",l:"Fee $0.08",d:"Acquirer scheme fee.",led:{acq:-0.08,sch:0.08}},
+    {p:"Settlement",f:"iss",t:"sch",k:"money",l:"Fee $0.05",d:"Issuer scheme fee.",led:{iss:-0.05,sch:0.05}},
+    {p:"Funding",f:"acq",t:"gw",k:"money",l:"Pays PSP $99.10",d:"The acquirer pays the PSP at wholesale pricing (0.9%).",led:{acq:-99.1,gw:99.1}},
+    {p:"Funding",f:"gw",t:"web",k:"money",l:"Payout $97.95",d:"The PSP pays out at T+2, less its blended 1.75% + 30c ($2.05), and sends a payout report for reconciliation.",m:M("Gateway report","payout.paid","Settlement / payout report",["Gross, fees, net per transaction","Bank deposit reference"]),terms:["MSF","Funding"],led:{gw:-97.95,web:97.95}},
+    {p:"Billing",f:"sh",t:"iss",k:"money",l:"Repays $100",d:"Final value chain: merchant $97.95, PSP $1.15, acquirer $0.32, issuer $0.45, scheme $0.13.",led:{sh:-100,iss:100}}
+  ]
+},
+{
+  id:"chargeback", group:"Cards", name:"Chargeback / dispute", amount:"$100.00 disputed · goods not received",
+  summary:"The reverse lifecycle. The cardholder disputes a purchase, the issuer raises a chargeback with a reason code, money flows back through settlement, and the merchant responds with evidence (representment). The ledger shows only the effect of the dispute.",
+  nodes:[N("ch","Cardholder","Disputes purchase",110,90,"person"),N("m","Merchant","Online store",110,450,"business"),
+         N("acq","Acquirer","Merchant's bank",400,450,"bank"),N("sch","Card scheme","Dispute rules",650,270,"scheme"),
+         N("iss","Issuer","Cardholder's bank",890,90,"bank"),N("rits","RBA · RITS","ESAs",890,450,"infra")],
+  ledger:["ch","m","acq","iss"],
+  steps:[
+    {p:"Dispute",f:"ch",t:"iss",k:"msg",l:"Dispute: not received",d:"The cardholder reports that a $100 order never arrived, after contacting the merchant.",m:M("Bank app / call centre","Dispute claim","Cardholder dispute",["Transaction ID / ARN","Reason: merchandise not received","Expected delivery date, contact evidence"])},
+    {p:"Dispute",f:"iss",t:"ch",k:"money",l:"Provisional credit",d:"The issuer gives the cardholder a provisional credit while the dispute runs.",led:{ch:100,iss:-100}},
+    {p:"Chargeback",f:"iss",t:"sch",k:"msg",l:"Chargeback",d:"Within the scheme's time limit (often up to 120 days), the issuer raises a chargeback through the scheme's dispute system.",
+      m:M("Visa VROL / MC Mastercom","Chargeback (IPM 1442)","First chargeback",["Reason code: Visa 13.1 / MC 4855","Original ARN and amount","Supporting documentation"]),terms:["Chargeback","Reason code","IPM"]},
+    {p:"Chargeback",f:"sch",t:"acq",k:"msg",l:"Chargeback notice",d:"The scheme delivers the chargeback to the acquirer."},
+    {p:"Chargeback",f:"acq",t:"rits",k:"money",l:"Debited $100",d:"The chargeback is included in the next settlement, so value moves from the acquirer back to the issuer.",led:{acq:-100}},
+    {p:"Chargeback",f:"rits",t:"iss",k:"money",l:"Credit $100",d:"The issuer recovers what it provisionally credited.",led:{iss:100}},
+    {p:"Chargeback",f:"acq",t:"m",k:"msg",l:"Notice + evidence?",d:"The acquirer notifies the merchant through its dispute portal or API.",m:M("Acquirer portal / API","dispute.created","Dispute notification",["Reason code, due date","Evidence types accepted"])},
+    {p:"Chargeback",f:"m",t:"acq",k:"money",l:"Debit $100 + $25 fee",d:"The acquirer debits the merchant for the amount plus a chargeback fee. If the merchant had failed, the acquirer would carry the loss, which is why acquirers hold reserves.",led:{m:-125,acq:125}},
+    {p:"Representment",f:"m",t:"acq",k:"msg",l:"Evidence",d:"The merchant uploads courier tracking.",terms:["Representment"]},
+    {p:"Representment",f:"acq",t:"sch",k:"msg",l:"Second presentment",d:"The acquirer re-presents the transaction with the evidence.",m:M("MC IPM / Visa VROL","1240 / 205","Second presentment (dispute response)")},
+    {p:"Representment",f:"sch",t:"iss",k:"msg",l:"Review",d:"The issuer reviews the evidence."},
+    {p:"Outcome",f:"iss",t:"iss",k:"act",l:"Chargeback stands",d:"The tracking shows delivery to the wrong address, so the chargeback stands. In a less clear case the issuer could move to pre-arbitration and then arbitration, where the scheme decides and the loser pays a fee.",terms:["Arbitration"]}
+  ]
+},
+
+/* ===================== INSIDE THE BANK ===================== */
+{
+  id:"bank-out", group:"Inside the bank", isNew:true, name:"Outbound payment · payer's bank", amount:"$250.00 NPP payment · every internal step",
+  summary:"What happens inside a bank when a customer presses Pay: digital channel, payment hub (validation, enrichment, rail selection), fraud and sanctions screening, funds reservation in core banking, the liquidity check, building and signing the ISO 20022 pacs.008, the NPP gateway, the status report, general ledger postings and end-of-day reconciliation.",
+  zones:[{x:200,y:20,w:640,h:500,label:"Inside the payer's bank"}],
+  nodes:[N("cust","Customer","Payer",90,270,"person"),N("chan","Digital channel","App / internet banking",310,90,"sys"),
+         N("hub","Payment hub","Orchestration",310,270,"sys"),N("fraud","Fraud engine","Scam & mule detection",510,90,"sys"),
+         N("sanc","Sanctions & AML","Screening",720,90,"sys"),N("pag","NPP gateway","PAG · HSM signing",720,270,"sys"),
+         N("core","Core banking","Customer ledger",510,450,"sys"),N("liq","Treasury","ESA / FSS liquidity",720,450,"sys"),
+         N("gl","General ledger","Suspense & recon",310,450,"sys"),N("npp","NPP + RBA FSS","Payee's bank beyond",925,270,"infra")],
+  ledger:["cust","core"], names:{core:"Payer's bank"}, transit:"Sent to payee's bank",
+  steps:[
+    {p:"Initiation",f:"cust",t:"chan",k:"msg",l:"Log in + pay $250",d:"The customer signs in with biometrics, picks a payee by PayID, and enters $250 with a description.",m:M("App API (HTTPS/JSON)","POST /payments","Channel payment request",["Session token (MFA / biometric)","Payee PayID, amount, description","Device ID, location, behavioural signals"])},
+    {p:"Initiation",f:"chan",t:"hub",k:"msg",l:"Payment instruction",d:"The channel sends the instruction to the payment hub in the bank's canonical model, based on ISO 20022 pain.001. Corporate customers may send pain.001 files host-to-host.",
+      m:M("ISO 20022 (canonical)","pain.001","Customer credit transfer initiation",["Debtor account (BSB + acct)","Creditor PayID → BSB/acct","InstdAmt AUD 250.00","EndToEndId","RmtInf (≤280 chars on NPP)"]),terms:["pain.001","Payment hub"]},
+    {p:"Validation",f:"hub",t:"hub",k:"act",l:"Validate",d:"Technical validation (schema, mandatory fields, character set). Business validation (BSB in AusPayNet's directory, account not blocked, daily limits, cut-off times). Duplicate detection on the same EndToEndId, amount and payee within a time window.",terms:["BSB"]},
+    {p:"Validation",f:"hub",t:"pag",k:"msg",l:"PayID lookup",d:"The hub resolves the PayID through the NPP Addressing Service to get the account and the name to show the customer.",m:M("NPP Addressing Service API","PayID resolution","Resolve alias",["PayID type: TELI (phone)","Returns BSB/acct + PayID name"]),terms:["PayID"]},
+    {p:"Validation",f:"pag",t:"hub",k:"msg",l:"Name: Jane C.",d:"The name was shown on screen before the customer confirmed. A mismatch would trigger a scam warning.",terms:["Confirmation of Payee"]},
+    {p:"Validation",f:"hub",t:"hub",k:"act",l:"Enrich & rail selection",d:"The hub adds BIC, clearing codes and purpose data, then picks a rail: NPP (real time, payee reachable), else BECS (batch) or HVCS (high value, urgent). It also sets the charges.",terms:["Rail selection"]},
+    {p:"Screening",f:"hub",t:"fraud",k:"msg",l:"Fraud check",d:"The fraud engine scores the payment in real time.",m:M("API","ScoreRequest","Real-time fraud score",["First payment to this payee?","Device, session, behavioural biometrics","Amount vs customer history","Mule-account intelligence (receiving bank)"])},
+    {p:"Screening",f:"fraud",t:"hub",k:"msg",l:"Allow",d:"A high score could pause the payment, show a scam warning, or trigger a call from the bank."},
+    {p:"Screening",f:"hub",t:"sanc",k:"msg",l:"Screen",d:"Payer and payee are screened against sanctions lists, and AML transaction-monitoring rules run.",m:M("API","Screening request","Sanctions & AML",["Names vs DFAT Consolidated List","Other sanctions lists as required","AML/CTF monitoring rules"]),terms:["Sanctions screening"]},
+    {p:"Screening",f:"sanc",t:"hub",k:"msg",l:"Clear",d:"A potential match would stop the payment for manual review by compliance."},
+    {p:"Funds",f:"hub",t:"core",k:"msg",l:"Debit account",d:"The hub asks core banking to check available balance and debit the customer.",m:M("Internal API","Debit request","Funds check & posting",["Available balance + overdraft","Dr Customer account 250.00","Cr Outward NPP suspense 250.00"]),terms:["Core banking","Suspense account"],led:{cust:-250,core:250}},
+    {p:"Funds",f:"core",t:"hub",k:"msg",l:"Debited",d:"The customer's balance drops immediately. The money now sits in the bank's outward suspense account."},
+    {p:"Funds",f:"hub",t:"liq",k:"msg",l:"Liquidity check",d:"NPP payments settle from the bank's FSS allocation at the RBA. Treasury watches this position 24/7.",m:M("Internal","Position check","ESA / FSS liquidity",["Current FSS allocation","Projected outflows vs inflows","Auto top-up from RITS ESA if low"]),terms:["ESA","FSS"]},
+    {p:"Funds",f:"liq",t:"hub",k:"msg",l:"OK",d:"If liquidity were short, the payment would queue until treasury added funds (for example through a repo with the RBA)."},
+    {p:"Clearing",f:"hub",t:"pag",k:"msg",l:"Release payment",d:"The hub sends the payment to the NPP gateway."},
+    {p:"Clearing",f:"pag",t:"pag",k:"act",l:"Build & sign",d:"The gateway builds the ISO 20022 message, signs it using the HSM, and manages the session with the NPP Basic Infrastructure.",
+      m:M("ISO 20022","pacs.008","FI-to-FI customer credit transfer",["GrpHdr: MsgId, CreDtTm, SttlmMtd CLRG","PmtId: InstrId, EndToEndId, TxId","IntrBkSttlmAmt AUD 250.00","Dbtr / DbtrAcct / DbtrAgt (BSB)","Cdtr / CdtrAcct / CdtrAgt","RmtInf Ustrd · Purp / CtgyPurp"]),terms:["pacs.008","NPP gateway (PAG)","HSM"]},
+    {p:"Clearing",f:"pag",t:"npp",k:"msg",l:"pacs.008",d:"The NPP validates the message, gets acceptance from the payee's bank, and asks the RBA's FSS to settle.",m:M("ISO 20022","pacs.008","Credit transfer")},
+    {p:"Settlement",f:"npp",t:"npp",k:"act",l:"FSS settles",d:"FSS debits this bank's ESA and credits the payee bank's ESA, gross and final, in seconds.",terms:["FSS","Finality"],led:{core:-250}},
+    {p:"Settlement",f:"npp",t:"pag",k:"msg",l:"pacs.002 ACSC",d:"A status report confirms settlement. A rejection would carry RJCT with a reason code.",
+      m:M("ISO 20022","pacs.002","FI payment status report",["TxSts = ACSC (settled)","Or RJCT + reason: AC01 incorrect account, AC04 closed, AG01 forbidden","Settlement timestamp"]),terms:["pacs.002"]},
+    {p:"Posting",f:"pag",t:"hub",k:"msg",l:"Status: settled",d:"The hub updates the payment's state from IN_PROGRESS to COMPLETED."},
+    {p:"Posting",f:"hub",t:"gl",k:"msg",l:"Post GL",d:"The suspense balance is cleared against the ESA settlement account.",m:M("Internal","Journal","General ledger posting",["Dr Outward NPP suspense 250.00","Cr ESA settlement account (RBA) 250.00"]),terms:["General ledger","Suspense account"]},
+    {p:"Posting",f:"hub",t:"chan",k:"msg",l:"Complete",d:"The channel gets the final status."},
+    {p:"Posting",f:"chan",t:"cust",k:"msg",l:"Paid ✓",d:"The app shows 'Paid'. Corporate customers would also get a camt.054 debit notification, and pain.002 status for file-based payments.",m:M("Push / ISO 20022","camt.054 / pain.002","Customer notification"),terms:["camt.054"]},
+    {p:"End of day",f:"gl",t:"gl",k:"act",l:"Reconcile",d:"Operations reconcile RITS ESA statements against the general ledger and payment hub records, investigate breaks, file regulatory reports (for example AUSTRAC suspicious matter reports where required) and produce statements (camt.053 for corporates).",terms:["Reconciliation","camt.053"]},
+    {p:"Exceptions",f:"hub",t:"hub",k:"act",l:"If rejected / recalled",d:"On a pacs.002 RJCT the hub reverses the debit and tells the customer. After settlement, a mistaken or scam payment is pursued with a recall request (camt.056), answered by camt.029. The payee bank returns any funds with pacs.004.",terms:["camt.056","pacs.004"]}
+  ]
+},
+{
+  id:"bank-in", group:"Inside the bank", isNew:true, name:"Inbound payment · payee's bank", amount:"$250.00 NPP payment received",
+  summary:"The receiving side: the NPP gateway takes in the pacs.008, the payment hub validates the account, screens for sanctions and mule activity, accepts the payment, waits for FSS settlement, credits the customer, posts to the general ledger and notifies the customer.",
+  zones:[{x:200,y:20,w:640,h:500,label:"Inside the payee's bank"}],
+  nodes:[N("npp","NPP + RBA FSS","from payer's bank",90,270,"infra"),N("pag","NPP gateway","PAG · signature check",310,270,"sys"),
+         N("hub","Payment hub","Inbound processing",510,270,"sys"),N("sanc","Sanctions & AML","Screening",510,90,"sys"),
+         N("fraud","Fraud engine","Mule detection",720,90,"sys"),N("core","Core banking","Customer ledger",510,450,"sys"),
+         N("gl","General ledger","Suspense & recon",310,450,"sys"),N("chan","Digital channel","App notifications",720,450,"sys"),
+         N("payee","Payee","Customer",925,450,"person")],
+  ledger:["core","payee"], names:{core:"Payee's bank"}, transit:"Received from payer's bank",
+  steps:[
+    {p:"Receive",f:"npp",t:"pag",k:"msg",l:"pacs.008 inbound",d:"Before settlement, the NPP delivers the payment and asks this bank whether it will accept it.",m:M("ISO 20022","pacs.008","FI-to-FI customer credit transfer",["CdtrAcct BSB/acct","IntrBkSttlmAmt AUD 250.00","EndToEndId, RmtInf"]),terms:["pacs.008","NPP gateway (PAG)"]},
+    {p:"Receive",f:"pag",t:"pag",k:"act",l:"Verify signature",d:"The gateway checks the message signature and schema, then hands it to the hub."},
+    {p:"Receive",f:"pag",t:"hub",k:"msg",l:"Validate",d:"The hub starts inbound processing, with a tight time budget of a few seconds end to end."},
+    {p:"Checks",f:"hub",t:"core",k:"msg",l:"Account check",d:"Core banking confirms the account exists, is open and can receive funds (not closed, deceased or blocked).",m:M("Internal API","Account enquiry","Credit eligibility",["Account status","Restrictions / blocks","Account name"]),terms:["Core banking"]},
+    {p:"Checks",f:"core",t:"hub",k:"msg",l:"OK",d:""},
+    {p:"Checks",f:"hub",t:"sanc",k:"msg",l:"Screen",d:"The parties are screened against sanctions lists.",terms:["Sanctions screening"]},
+    {p:"Checks",f:"sanc",t:"hub",k:"msg",l:"Clear",d:""},
+    {p:"Checks",f:"hub",t:"fraud",k:"msg",l:"Mule check",d:"Inbound monitoring looks for mule accounts. For example, a new account suddenly receiving many payments may be flagged and the funds held."},
+    {p:"Checks",f:"fraud",t:"hub",k:"msg",l:"OK",d:""},
+    {p:"Accept",f:"hub",t:"pag",k:"msg",l:"Accept",d:"The hub accepts the payment."},
+    {p:"Accept",f:"pag",t:"npp",k:"msg",l:"pacs.002 accept",d:"The acceptance goes back to the NPP. Rejecting now (for example with AC04 closed account) would stop the payment before any money moved.",m:M("ISO 20022","pacs.002","Payment status report",["TxSts = ACTC / ACCP (accepted)","or RJCT + reason code"]),terms:["pacs.002","Reason code"]},
+    {p:"Settlement",f:"npp",t:"npp",k:"act",l:"FSS settles",d:"FSS debits the payer bank's ESA and credits this bank's ESA, gross and final.",terms:["FSS","ESA"],led:{core:250}},
+    {p:"Settlement",f:"npp",t:"pag",k:"msg",l:"Settled",d:"Settlement confirmation arrives. Only now may the bank credit the customer.",m:M("ISO 20022","pacs.002","Status: ACSC (settled)")},
+    {p:"Posting",f:"pag",t:"hub",k:"msg",l:"Settled",d:""},
+    {p:"Posting",f:"hub",t:"core",k:"money",l:"Credit account",d:"The customer's account is credited and the funds are available immediately.",m:M("Internal API","Credit posting","Customer credit",["Cr Customer account 250.00","Dr Inward NPP suspense 250.00"]),led:{core:-250,payee:250}},
+    {p:"Posting",f:"hub",t:"gl",k:"msg",l:"Post GL",d:"The ESA settlement account and inward suspense are cleared.",m:M("Internal","Journal","General ledger posting",["Dr ESA settlement account 250.00","Cr Inward NPP suspense 250.00"]),terms:["General ledger"]},
+    {p:"Notify",f:"hub",t:"chan",k:"msg",l:"Notify",d:""},
+    {p:"Notify",f:"chan",t:"payee",k:"msg",l:"$250 received",d:"Push notification within seconds. Corporates receive camt.054 credit notifications for automatic reconciliation.",m:M("Push / ISO 20022","camt.054","Credit notification"),terms:["camt.054"]},
+    {p:"Exceptions",f:"hub",t:"hub",k:"act",l:"Returns & recalls",d:"If funds can't be applied after settlement, the bank returns them with pacs.004. A recall request (camt.056) from the payer's bank needs an investigation and a camt.029 answer. Funds are only returned with the payee's consent, or under scam and mistaken-payment rules.",terms:["pacs.004","camt.056"]}
+  ]
+},
+
+/* ===================== ACCOUNT TO ACCOUNT ===================== */
+{
+  id:"becs-credit", group:"Account to account", name:"BECS direct credit · payroll", amount:"$3,000.00 salary in a payroll file",
+  summary:"Direct Entry (BECS) is batch-based. The employer uploads one ABA file (records 0/1/7), banks exchange files over COIN, and RITS settles the net position in scheduled intraday batches through LVSS.",
+  nodes:[N("emp","Employer","Payroll system",110,120,"business"),N("ba","Employer's bank","Sending ADI",380,120,"bank"),
+         N("coin","COIN","File exchange network",640,120,"infra"),N("bb","Employee's bank","Receiving ADI",890,270,"bank"),
+         N("wk","Employee","BSB + account",890,440,"person"),N("rits","RBA · RITS","LVSS batch",500,430,"infra")],
+  ledger:["emp","ba","bb","wk"],
+  steps:[
+    {p:"Initiation",f:"emp",t:"ba",k:"msg",l:"Upload ABA file",d:"Payroll run: an ABA (Cemtex) file covers 200 employees. We follow one $3,000 salary.",
+      m:M("ABA (Cemtex) file","Records 0 / 1 / 7","Direct entry file",["Type 0: header: bank, user name, DE User ID, date","Type 1: per payee: BSB 062-000, acct, txn code 53 (pay), amount, lodgement ref, trace BSB/acct","Type 7: file totals: net, credits, debits, count"]),terms:["ABA file","BSB","BECS"]},
+    {p:"Initiation",f:"ba",t:"ba",k:"act",l:"Validate + debit",d:"The bank checks the file totals, the DE User ID and the BSBs, then debits the employer for the total and sorts the items by receiving BSB.",terms:["DE User ID"],led:{emp:-3000,ba:3000}},
+    {p:"Clearing",f:"ba",t:"coin",k:"msg",l:"Outbound DE file",d:"Items for each receiving bank are sent as files over COIN.",m:M("BECS exchange file","DE file","Bilateral exchange",["One file per receiving institution","Exchange totals for settlement"]),terms:["COIN","Clearing"]},
+    {p:"Clearing",f:"coin",t:"bb",k:"msg",l:"Inbound DE file",d:"The receiving bank gets its file of incoming credits."},
+    {p:"Settlement",f:"ba",t:"rits",k:"msg",l:"FSI",d:"The sending bank lodges a File Settlement Instruction with the RBA's LVSS.",m:M("RITS LVSS","FSI","File Settlement Instruction",["Paying and receiving ESA holders","Net value of the exchange","Settlement session"]),terms:["FSI","LVSS"]},
+    {p:"Settlement",f:"rits",t:"rits",k:"act",l:"Net batch settlement",d:"In the next scheduled intraday session, RITS settles all banks' net BECS obligations together.",terms:["DNS","Net settlement"]},
+    {p:"Settlement",f:"ba",t:"rits",k:"money",l:"ESA debit (net)",d:"The sending bank's ESA is debited.",terms:["ESA"],led:{ba:-3000}},
+    {p:"Settlement",f:"rits",t:"bb",k:"money",l:"ESA credit (net)",d:"The receiving bank's ESA is credited.",led:{bb:3000}},
+    {p:"Posting",f:"bb",t:"wk",k:"money",l:"Salary credited",d:"The employee sees the salary the same day or next morning, depending on the settlement session.",led:{bb:-3000,wk:3000}},
+    {p:"Exceptions",f:"bb",t:"bb",k:"act",l:"Return if invalid",d:"If the account were invalid or closed, the receiving bank would return the item in a later file and the value would flow back.",m:M("ABA","Type 2 return","Return record",["Reasons: 1 invalid BSB, 2 payment stopped, 3 account closed, 4 deceased, 5 no account/incorrect no., 6 refer to customer, 9 technically invalid"]),terms:["Dishonour"]}
+  ]
+},
+{
+  id:"becs-debit", group:"Account to account", name:"BECS direct debit", amount:"$50.00 monthly gym membership",
+  summary:"A pull payment. The biller holds a signed Direct Debit Request and draws money from the payer's account through its sponsor bank, using ABA transaction code 13. The payer's bank can dishonour the item.",
+  nodes:[N("payer","Payer","Gym member",110,110,"person"),N("pb","Payer's bank","Debited ADI",420,110,"bank"),
+         N("biller","Biller","Gym",110,430,"business"),N("bb","Biller's bank","Sponsor ADI",420,430,"bank"),
+         N("rits","RBA · RITS","LVSS batch",790,270,"infra")],
+  ledger:["payer","pb","biller","bb"],
+  steps:[
+    {p:"Setup",f:"payer",t:"biller",k:"msg",l:"Sign DDR",d:"The member signs a Direct Debit Request authorising $50 a month.",m:M("Form / online","DDR","Direct Debit Request + service agreement",["Payer name, BSB, account","Amount / frequency","Biller DE User ID"]),terms:["DDR"]},
+    {p:"Initiation",f:"biller",t:"bb",k:"msg",l:"Debit file",d:"On billing day the gym lodges an ABA debit file. Its sponsor bank is liable for these debits.",m:M("ABA file","Type 1 · txn code 13","Debit detail record",["Payer BSB/acct, amount","Lodgement reference (member no.)","Trace account for returns"]),terms:["DE User ID","Sponsor bank","ABA file"]},
+    {p:"Clearing",f:"bb",t:"pb",k:"msg",l:"Debit items",d:"The debit items are exchanged with the payer's bank over COIN.",terms:["COIN"]},
+    {p:"Clearing",f:"pb",t:"pb",k:"act",l:"Debit account",d:"The payer's bank debits the member's account.",led:{payer:-50,pb:50}},
+    {p:"Settlement",f:"bb",t:"rits",k:"msg",l:"FSI",d:"A File Settlement Instruction is lodged with LVSS.",m:M("RITS LVSS","FSI","File Settlement Instruction"),terms:["FSI","LVSS"]},
+    {p:"Settlement",f:"pb",t:"rits",k:"money",l:"ESA debit",d:"The payer's bank pays the net amount in the batch.",led:{pb:-50}},
+    {p:"Settlement",f:"rits",t:"bb",k:"money",l:"ESA credit",d:"The biller's bank receives value.",led:{bb:50}},
+    {p:"Posting",f:"bb",t:"biller",k:"money",l:"Credit $49.70",d:"The sponsor bank credits the gym, less a 30c per-item fee.",led:{bb:-49.7,biller:49.7}},
+    {p:"Exceptions",f:"pb",t:"bb",k:"msg",l:"(Dishonour window)",d:"If funds were insufficient, the payer's bank would return the item within the return window, reversing the gym's credit, usually with a dishonour fee. This is a big reason billers are moving to PayTo.",m:M("ABA","Type 2 return","Dishonour",["Reason 6: refer to customer (insufficient funds)"]),terms:["Dishonour","PayTo"]}
+  ]
+},
+{
+  id:"npp", group:"Account to account", name:"NPP · Osko to a PayID", amount:"$250.00 · real time, 24/7",
+  summary:"A real-time payment on the New Payments Platform, end to end across both banks. The PayID resolves to an account and name, pacs.008 clears through the NPP, the payee bank accepts with pacs.002, FSS settles gross in seconds, and both sides get status. See 'Inside the bank' for each bank's internal systems.",
+  nodes:[N("payer","Payer","Banking app",100,110,"person"),N("pb","Payer's bank","NPP participant",340,110,"bank"),
+         N("npp","NPP","Basic Infrastructure",600,110,"infra"),N("bb","Payee's bank","NPP participant",880,110,"bank"),
+         N("addr","Addressing Service","PayID registry",340,430,"infra"),N("fss","RBA · FSS","24/7 settlement",600,430,"infra"),
+         N("payee","Payee","Friend",880,430,"person")],
+  ledger:["payer","pb","bb","payee"],
+  steps:[
+    {p:"Initiation",f:"payer",t:"pb",k:"msg",l:"Pay PayID 0412…",d:"Sunday, 3am: $250 to a friend's mobile-number PayID.",terms:["PayID","NPP"]},
+    {p:"Initiation",f:"pb",t:"addr",k:"msg",l:"Resolve PayID",d:"The bank looks up the PayID.",m:M("NPP Addressing Service API","PayID resolution","Alias lookup",["PayID type TELI (phone), value +61-412…","Response: BSB/acct, PayID name, status"])},
+    {p:"Initiation",f:"addr",t:"pb",k:"msg",l:"Name: Jane C.",d:"The name is shown before the payer confirms.",terms:["Confirmation of Payee"]},
+    {p:"Initiation",f:"pb",t:"pb",k:"act",l:"Confirm + screen + debit",d:"The payer confirms. The bank runs fraud and sanctions checks and debits the account.",led:{payer:-250,pb:250}},
+    {p:"Clearing",f:"pb",t:"npp",k:"msg",l:"pacs.008",d:"An ISO 20022 credit transfer under the Osko overlay.",m:M("ISO 20022","pacs.008","FI-to-FI customer credit transfer",["EndToEndId, TxId","IntrBkSttlmAmt AUD 250.00","Dbtr/Cdtr agents (BSB)","RmtInf ≤280 chars"]),terms:["ISO 20022","Osko","pacs.008"]},
+    {p:"Clearing",f:"npp",t:"bb",k:"msg",l:"pacs.008 (validate)",d:"The NPP delivers the payment to the payee bank and asks it to accept."},
+    {p:"Clearing",f:"bb",t:"npp",k:"msg",l:"pacs.002 accept",d:"The account is valid and open, and screening is clear.",m:M("ISO 20022","pacs.002","Status: accepted"),terms:["pacs.002"]},
+    {p:"Settlement",f:"npp",t:"fss",k:"msg",l:"Settlement request",d:"The NPP asks the RBA's Fast Settlement Service to settle.",m:M("ISO 20022 (FSS)","Settlement request","Request to settle single payment"),terms:["FSS"]},
+    {p:"Settlement",f:"pb",t:"fss",k:"money",l:"ESA debit $250",d:"FSS debits the payer bank's ESA...",terms:["ESA","RTGS"],led:{pb:-250}},
+    {p:"Settlement",f:"fss",t:"bb",k:"money",l:"ESA credit $250",d:"...and credits the payee bank's ESA, gross and final, at 3am on a Sunday.",terms:["Finality"],led:{bb:250}},
+    {p:"Settlement",f:"fss",t:"npp",k:"msg",l:"Settled",d:"Settlement response."},
+    {p:"Posting",f:"npp",t:"bb",k:"msg",l:"pacs.002 ACSC",d:"The payee bank is told settlement is complete.",m:M("ISO 20022","pacs.002","Status: ACSC (settled)")},
+    {p:"Posting",f:"bb",t:"payee",k:"money",l:"Funds available",d:"The friend has the money, usually within seconds of the payer pressing Pay.",led:{bb:-250,payee:250}},
+    {p:"Posting",f:"npp",t:"pb",k:"msg",l:"pacs.002 ACSC",d:"The payer's app shows the payment as complete.",m:M("ISO 20022","pacs.002","Status: ACSC (settled)")}
+  ]
+},
+{
+  id:"payto", group:"Account to account", name:"PayTo · payment agreement", amount:"$19.99 monthly subscription",
+  summary:"The NPP's modern replacement for direct debit. The payer approves a payment agreement in their banking app. The merchant then initiates payments, which run as real-time NPP credits (pacs.008) settled in FSS.",
+  nodes:[N("cust","Customer","Banking app",100,110,"person"),N("cb","Customer's bank","NPP participant",380,110,"bank"),
+         N("mms","Mandate service","MMS · PayTo agreements",640,110,"infra"),N("mb","Merchant's bank","Initiator's ADI",880,270,"bank"),
+         N("m","Merchant","Payment initiator",880,440,"business"),N("npp","NPP + RBA FSS","real-time settlement",500,430,"infra")],
+  ledger:["cust","cb","mb","m"],
+  steps:[
+    {p:"Agreement",f:"m",t:"mb",k:"msg",l:"Create agreement",d:"A streaming service requests a PayTo agreement for up to $30 a month.",m:M("PSP / bank API","Create agreement","Payment agreement request",["Payer PayID or BSB/acct","Max amount $30, frequency monthly","Purpose, start date, initiator ID"]),terms:["PayTo","Payment initiator"]},
+    {p:"Agreement",f:"mb",t:"mms",k:"msg",l:"Store (pending)",d:"The agreement is recorded in the MMS with status pending.",m:M("NPP MMS API","Create agreement","Agreement status: PDNG"),terms:["MMS"]},
+    {p:"Agreement",f:"mms",t:"cb",k:"msg",l:"Notify",d:"The customer's bank is notified."},
+    {p:"Agreement",f:"cb",t:"cust",k:"msg",l:"Approve?",d:"The banking app shows who, how much and how often."},
+    {p:"Agreement",f:"cust",t:"cb",k:"msg",l:"Approve ✓",d:"The customer can later pause, amend or cancel it from their own app."},
+    {p:"Agreement",f:"cb",t:"mms",k:"msg",l:"Agreement active",d:"",m:M("NPP MMS API","Amend status","Agreement status: ACTV")},
+    {p:"Agreement",f:"mms",t:"mb",k:"msg",l:"Active",d:""},
+    {p:"Agreement",f:"mb",t:"m",k:"msg",l:"Ready to bill",d:"",m:M("PSP webhook","agreement.active","Notification")},
+    {p:"Payment",f:"m",t:"mb",k:"msg",l:"Initiate $19.99",d:"Billing day.",m:M("PSP / bank API","Initiate payment","Payment under agreement",["Agreement ID","Amount 19.99","EndToEndId"])},
+    {p:"Payment",f:"mb",t:"cb",k:"msg",l:"Payment initiation",d:"A payment initiation request goes over the NPP to the customer's bank.",m:M("ISO 20022 (NPP)","pain.013","Creditor payment activation request",["Agreement (mandate) ID","Amount, requested execution","Creditor account"]),terms:["pain.013"]},
+    {p:"Payment",f:"cb",t:"cb",k:"act",l:"Check agreement + funds",d:"The bank checks the request against the active agreement in the MMS and the available balance, then debits the account.",led:{cust:-19.99,cb:19.99}},
+    {p:"Settlement",f:"cb",t:"npp",k:"money",l:"pacs.008 + FSS",d:"The payment executes as a real-time NPP push credit and settles gross in FSS.",m:M("ISO 20022","pacs.008","Credit transfer (with agreement reference)"),terms:["FSS","pacs.008"],led:{cb:-19.99}},
+    {p:"Settlement",f:"npp",t:"mb",k:"money",l:"Funds received",d:"Value arrives within seconds. There is no dishonour risk, because funds were checked first.",m:M("ISO 20022","pacs.002","Status: ACSC"),led:{mb:19.99}},
+    {p:"Posting",f:"mb",t:"m",k:"money",l:"Credit $19.94",d:"The merchant is credited, less a 5c per-payment fee.",led:{mb:-19.94,m:19.94}}
+  ]
+},
+{
+  id:"bpay", group:"Account to account", name:"BPAY bill payment", amount:"$180.00 electricity bill",
+  summary:"The customer pays a bill using a Biller Code and CRN. Payments are batched and settled net the next business day. The CRN gives the biller automatic reconciliation.",
+  nodes:[N("cust","Customer","Internet banking",100,110,"person"),N("cb","Customer's bank","Payer ADI",380,110,"bank"),
+         N("bpay","BPAY","AP+ switch",640,110,"scheme"),N("bb","Biller's bank","Biller ADI",880,270,"bank"),
+         N("biller","Biller","Energy company",880,440,"business"),N("rits","RBA · RITS","Net settlement",500,430,"infra")],
+  ledger:["cust","cb","bb","biller"],
+  steps:[
+    {p:"Initiation",f:"cust",t:"cb",k:"msg",l:"Biller code + CRN",d:"The customer enters the Biller Code, the CRN from the bill, and $180.",terms:["BPAY","CRN"]},
+    {p:"Initiation",f:"cb",t:"cb",k:"act",l:"Validate CRN + debit",d:"The bank checks the CRN's check digits using the biller's algorithm (catching typos), then debits the account.",led:{cust:-180,cb:180}},
+    {p:"Clearing",f:"cb",t:"bpay",k:"msg",l:"Payment batch",d:"BPAY payments go to the BPAY switch in batches.",m:M("BPAY batch file","Payment instructions","Payer institution → BPAY",["Biller code, CRN, amount","Payment date, BPAY receipt no."]),terms:["Clearing"]},
+    {p:"Clearing",f:"bpay",t:"bb",k:"msg",l:"Biller payment file",d:"BPAY sorts payments by biller and sends them to each biller's bank."},
+    {p:"Settlement",f:"bpay",t:"rits",k:"msg",l:"Net obligations",d:"Net positions are submitted for settlement.",terms:["Net settlement"]},
+    {p:"Settlement",f:"cb",t:"rits",k:"money",l:"ESA debit (net)",d:"The paying bank settles the next business day.",terms:["ESA"],led:{cb:-180}},
+    {p:"Settlement",f:"rits",t:"bb",k:"money",l:"ESA credit (net)",d:"The biller's bank receives value.",led:{bb:180}},
+    {p:"Posting",f:"bb",t:"biller",k:"money",l:"Credit $179.60",d:"The biller is credited, less a 40c per-transaction fee.",led:{bb:-179.6,biller:179.6}},
+    {p:"Posting",f:"bb",t:"biller",k:"msg",l:"Reconciliation file",d:"The file lists every payment with its CRN.",m:M("BPAY biller file","Reconciliation report","Biller payment details",["CRN, amount, payment date","BPAY receipt number","Error-correction / reversal items"])},
+    {p:"Posting",f:"biller",t:"biller",k:"act",l:"Mark bill paid",d:"The CRN matches the customer automatically and the bill is marked paid."}
+  ]
+},
+{
+  id:"cheque", group:"Account to account", name:"Cheque (APCS)", amount:"$500.00 cheque · being phased out",
+  summary:"Cheques clear through the Australian Paper Clearing System using image exchange. The payee only sees funds once the dishonour window has passed.",
+  nodes:[N("drawer","Drawer","Writes the cheque",100,110,"person"),N("db","Drawee bank","Drawer's bank",880,110,"bank"),
+         N("payee","Payee","Receives cheque",100,430,"person"),N("cbk","Collecting bank","Payee's bank",380,430,"bank"),
+         N("apcs","APCS","Image exchange",700,430,"infra"),N("rits","RBA · RITS","LVSS batch",560,230,"infra")],
+  ledger:["drawer","db","cbk","payee"],
+  steps:[
+    {p:"Initiation",f:"drawer",t:"payee",k:"msg",l:"Cheque $500",d:"The drawer writes a $500 cheque.",m:M("Paper (MICR)","MICR line","Encoded line",["Cheque serial no.","BSB","Account number","Transaction code"]),terms:["APCS"]},
+    {p:"Initiation",f:"payee",t:"cbk",k:"msg",l:"Deposit (app photo)",d:"Deposited at a branch, through an ATM, or as a photo in the banking app."},
+    {p:"Initiation",f:"cbk",t:"cbk",k:"act",l:"Uncleared funds",d:"The amount shows in the balance but is not yet available."},
+    {p:"Clearing",f:"cbk",t:"apcs",k:"msg",l:"Image + data",d:"The cheque image and MICR data are exchanged electronically.",m:M("APCS image exchange","Image file","Cheque images + data"),terms:["Clearing"]},
+    {p:"Clearing",f:"apcs",t:"db",k:"msg",l:"Presented",d:"The cheque is presented to the drawee bank."},
+    {p:"Settlement",f:"cbk",t:"rits",k:"msg",l:"FSI",d:"A settlement instruction is lodged with LVSS.",m:M("RITS LVSS","FSI","File Settlement Instruction"),terms:["FSI","LVSS"]},
+    {p:"Settlement",f:"db",t:"rits",k:"money",l:"ESA debit (net)",d:"Interbank settlement happens before the drawee has finished its checks.",led:{db:-500}},
+    {p:"Settlement",f:"rits",t:"cbk",k:"money",l:"ESA credit (net)",d:"The collecting bank receives value.",led:{cbk:500}},
+    {p:"Verification",f:"db",t:"db",k:"act",l:"Verify + debit drawer",d:"The drawee checks funds, signature and stop-payment instructions, then debits the drawer.",terms:["Dishonour"],led:{drawer:-500,db:500}},
+    {p:"Verification",f:"db",t:"cbk",k:"msg",l:"No dishonour",d:"No return was sent within the dishonour window. If one had been, the payee's credit would be reversed."},
+    {p:"Posting",f:"cbk",t:"payee",k:"money",l:"Funds cleared",d:"Funds become available about 3 business days after deposit.",led:{cbk:-500,payee:500}}
+  ]
+},
+
+/* ===================== WHOLESALE & CROSS-BORDER ===================== */
+{
+  id:"rtgs", group:"Wholesale & cross-border", name:"High-value RTGS (HVCS / SWIFT)", amount:"$2,000,000 · same-day, gross",
+  summary:"Large payments travel over SWIFT and settle one by one in RITS using the Y-copy model. The beneficiary bank only receives the message once the money has settled.",
+  nodes:[N("corp","Corporate","Buyer's treasury",100,110,"business"),N("ba","Bank A","Payer ADI",380,110,"bank"),
+         N("swift","SWIFT","HVCS (PDS)",640,110,"infra"),N("bb","Bank B","Payee ADI",880,270,"bank"),
+         N("seller","Seller","Beneficiary",880,440,"business"),N("rits","RBA · RITS","RTGS engine",500,430,"infra")],
+  ledger:["corp","ba","bb","seller"],
+  steps:[
+    {p:"Initiation",f:"corp",t:"ba",k:"msg",l:"Pay $2,000,000",d:"A corporate treasurer sends an urgent same-day payment from the bank's treasury portal or a host-to-host file.",m:M("ISO 20022","pain.001","Customer credit transfer initiation",["Urgent / high-value indicator","Beneficiary BIC + account"]),terms:["RTGS","pain.001"]},
+    {p:"Initiation",f:"ba",t:"ba",k:"act",l:"Debit + screen",d:"The bank checks limits, sanctions and fraud, debits the corporate, and selects HVCS.",terms:["Sanctions screening","Rail selection"],led:{corp:-2000000,ba:2000000}},
+    {p:"Clearing",f:"ba",t:"swift",k:"msg",l:"pacs.008",d:"An HVCS payment message goes over SWIFT. Interbank-only payments use pacs.009.",m:M("ISO 20022 (HVCS)","pacs.008 / pacs.009","Customer / FI credit transfer",["UETR","Settlement method: RTGS","Debtor & creditor agents (BIC)"]),terms:["SWIFT","pacs.008","pacs.009"]},
+    {p:"Clearing",f:"swift",t:"rits",k:"msg",l:"Y-copy settlement request",d:"SWIFT holds the full message and sends RITS only the settlement details. Under the legacy MT format this was the FIN Copy MT096.",m:M("SWIFT Y-copy","Settlement request","Copy to RITS (legacy MT096)",["Amount, value date","Paying and receiving banks"]),terms:["Y-copy","FIN Copy (Y-copy)"]},
+    {p:"Settlement",f:"rits",t:"rits",k:"act",l:"Check ESA / queue",d:"RITS checks Bank A's ESA balance and credit status. If funds are short, the payment queues until liquidity arrives, for example through an intraday repo.",terms:["ESA"]},
+    {p:"Settlement",f:"ba",t:"rits",k:"money",l:"ESA debit $2m",d:"Bank A's ESA is debited for this single payment (gross).",led:{ba:-2000000}},
+    {p:"Settlement",f:"rits",t:"bb",k:"money",l:"ESA credit $2m",d:"Bank B's ESA is credited. This is final.",terms:["Finality"],led:{bb:2000000}},
+    {p:"Settlement",f:"rits",t:"swift",k:"msg",l:"Settled",d:"RITS authorises release (legacy MT097).",m:M("SWIFT Y-copy","Settlement response","Authorisation to release (legacy MT097)")},
+    {p:"Posting",f:"swift",t:"bb",k:"msg",l:"Message released",d:"Only now does SWIFT release the payment to Bank B.",m:M("ISO 20022","pacs.008","Released payment")},
+    {p:"Posting",f:"bb",t:"seller",k:"money",l:"Credit seller",d:"The seller's account is credited within minutes, and the seller receives a camt.054 notification.",m:M("ISO 20022","camt.054","Credit notification"),terms:["camt.054"],led:{bb:-2000000,seller:2000000}}
+  ]
+},
+{
+  id:"intl", group:"Wholesale & cross-border", name:"International inbound (SWIFT)", amount:"USD 10,000 → AUD · shared charges (SHA)",
+  summary:"A cross-border payment into Australia through correspondent banking: pacs.008 (formerly MT103), FX conversion, nostro/vostro debits, HVCS settlement, IFTI reporting to AUSTRAC, and statements for nostro reconciliation. Amounts are shown in AUD.",
+  nodes:[N("snd","Overseas sender","US importer",100,110,"business"),N("ob","Overseas bank","New York",380,110,"bank"),
+         N("corr","AU correspondent","holds AUD vostro",660,110,"bank"),N("bb","Beneficiary bank","Australian ADI",900,270,"bank"),
+         N("ben","Beneficiary","Australian exporter",900,440,"business"),N("rits","RBA · RITS","HVCS settlement",660,430,"infra"),
+         N("aus","AUSTRAC","AML/CTF regulator",380,430,"reg")],
+  ledger:["snd","ob","corr","bb","ben"],
+  steps:[
+    {p:"Initiation",f:"snd",t:"ob",k:"msg",l:"Send USD 10,000 (SHA)",d:"The sender instructs a USD 10,000 payment with shared charges.",m:M("ISO 20022","pain.001","Customer initiation",["Beneficiary IBAN-equivalent: BSB + acct","Beneficiary bank BIC","Charges: SHA"])},
+    {p:"Initiation",f:"ob",t:"ob",k:"act",l:"FX convert + debit",d:"The bank debits the sender and converts to AUD at a rate with a margin. Shown as AUD 15,250, of which AUD 250 is fee and FX margin.",led:{snd:-15250,ob:15250}},
+    {p:"Messaging",f:"ob",t:"corr",k:"msg",l:"pacs.008",d:"A SWIFT customer credit transfer, tracked with a UETR on SWIFT gpi. Under the cover method, a separate pacs.009 COV would move the funds between the banks.",m:M("ISO 20022 (SWIFT CBPR+)","pacs.008","Customer credit transfer (was MT103)",["UETR","IntrBkSttlmAmt AUD 15,000","ChrgBr SHAR","Dbtr, Cdtr, intermediary agents"]),terms:["SWIFT","UETR","pacs.008"]},
+    {p:"Messaging",f:"corr",t:"corr",k:"act",l:"Debit vostro",d:"The correspondent debits the overseas bank's AUD vostro account, sends it a debit confirmation, and screens the payment.",m:M("ISO 20022","camt.054","Debit confirmation (was MT900)"),terms:["Nostro/vostro"],led:{ob:-15000,corr:15000}},
+    {p:"Compliance",f:"corr",t:"aus",k:"msg",l:"IFTI report",d:"The incoming international transfer is reported to AUSTRAC.",m:M("AUSTRAC Online","IFTI-E","International funds transfer instruction",["Ordering & beneficiary customer","Amount, date, institutions"]),terms:["IFTI"]},
+    {p:"Settlement",f:"corr",t:"rits",k:"money",l:"HVCS $14,980",d:"The correspondent deducts a $20 fee and pays on through HVCS, settling gross in RITS.",m:M("ISO 20022 (HVCS)","pacs.008","Domestic leg"),terms:["RTGS","ESA"],led:{corr:-14980}},
+    {p:"Settlement",f:"rits",t:"bb",k:"money",l:"ESA credit",d:"The beneficiary bank's ESA is credited.",led:{bb:14980}},
+    {p:"Posting",f:"bb",t:"bb",k:"act",l:"Screen & match",d:"Sanctions and AML screening, then account matching (name versus account)."},
+    {p:"Posting",f:"bb",t:"ben",k:"money",l:"Credit AUD 14,970",d:"The beneficiary is credited, less a $10 inward fee, and gets a camt.054. The sender paid AUD 15,250; the exporter received AUD 14,970.",m:M("ISO 20022","camt.054","Credit notification (was MT910)"),terms:["camt.054"],led:{bb:-14970,ben:14970}},
+    {p:"Compliance",f:"bb",t:"aus",k:"msg",l:"IFTI report",d:"IFTI reporting obligations sit with the institutions that send or receive the instruction in Australia."},
+    {p:"Reconciliation",f:"ob",t:"ob",k:"act",l:"Nostro reconciliation",d:"The overseas bank reconciles its AUD nostro using the correspondent's end-of-day statement.",m:M("ISO 20022","camt.053","Statement (was MT950)"),terms:["camt.053","Reconciliation"]}
+  ]
+},
+
+/* ===================== OTHER ===================== */
+{
+  id:"bnpl", group:"Other", name:"Buy Now Pay Later", amount:"$100.00 · 4 fortnightly instalments",
+  summary:"The BNPL provider pays the merchant up front, less a merchant fee, and collects from the shopper in four instalments charged to a stored card (merchant-initiated transactions).",
+  nodes:[N("sh","Shopper","Checkout",100,110,"person"),N("m","Merchant","Fashion retailer",100,430,"business"),
+         N("bnpl","BNPL provider","Credit licensee",520,270,"bank"),N("card","Shopper's card","Debit card / bank",880,110,"bank")],
+  ledger:["sh","m","bnpl"],
+  steps:[
+    {p:"Checkout",f:"sh",t:"m",k:"msg",l:"Pay with BNPL",d:"The shopper chooses BNPL for a $100 order."},
+    {p:"Checkout",f:"m",t:"bnpl",k:"msg",l:"Create order",d:"The merchant's server creates a BNPL order and redirects the shopper.",m:M("BNPL API (REST)","POST /checkouts","Create order",["Amount, items, merchant ref","Redirect / callback URLs"])},
+    {p:"Checkout",f:"bnpl",t:"bnpl",k:"act",l:"ID + credit check",d:"Identity, credit and affordability checks. BNPL providers need a credit licence and must meet responsible lending obligations since June 2025."},
+    {p:"Checkout",f:"bnpl",t:"card",k:"msg",l:"Charge instalment 1",d:"The first $25 is charged to the shopper's card, which is stored as a credential on file.",m:M("ISO 8583 (via gateway)","0100","Card-on-file authorisation",["Stored credential indicator (first CIT)","Network token"])},
+    {p:"Checkout",f:"card",t:"bnpl",k:"money",l:"$25",d:"The first instalment is collected (card fees are ignored here).",led:{sh:-25,bnpl:25}},
+    {p:"Checkout",f:"bnpl",t:"m",k:"msg",l:"Approved",d:"",m:M("BNPL webhook / redirect","order.approved","Approval")},
+    {p:"Funding",f:"bnpl",t:"m",k:"money",l:"Pays $96.00",d:"The merchant is paid up front, less a merchant fee of about 4%.",terms:["MSF"],led:{bnpl:-96,m:96}},
+    {p:"Instalments",f:"card",t:"bnpl",k:"money",l:"$25 (week 2)",d:"A merchant-initiated card payment.",m:M("ISO 8583","0100","Merchant-initiated transaction (MIT)",["Stored credential: subsequent MIT, instalment","Original transaction ID link"]),led:{sh:-25,bnpl:25}},
+    {p:"Instalments",f:"card",t:"bnpl",k:"money",l:"$25 (week 4)",d:"Third instalment.",led:{sh:-25,bnpl:25}},
+    {p:"Instalments",f:"card",t:"bnpl",k:"money",l:"$25 (week 6)",d:"Final instalment. Value chain: merchant $96, BNPL provider $4. A missed payment would add a capped late fee.",led:{sh:-25,bnpl:25}}
+  ]
+}
+];
+
+
+
+/* ---------- Playbook metadata per play ---------- */
+const META={
+  credit:{facts:{"Type":"Pull · card · dual message","Speed":"Approval 1–2 s · payout T+0 to T+2","Settlement":"Net, about T+1, RITS","Hours":"24/7 authorisation","Who pays":"Merchant (MSF)","Addressing":"Card number or token"},
+    use:["In-store and online retail","Customers wanting credit, rewards or chargeback protection","Travel and higher-value purchases"],
+    watch:["Highest acceptance cost of the card types","Surcharging rules are under RBA review","Merchants carry chargeback exposure"],
+    exc:["Response times out: gateway or terminal sends an 0400 reversal so the hold is released","Authorisation never captured: hold expires after about 7 days","Final amount differs from authorised (tips, fuel, hotels): incremental or partial authorisation","Refund is a new credit transaction (Visa TC06)","Cardholder dispute: see the Chargeback play"]},
+  issuer:{facts:{"Type":"Inside the issuing bank","Speed":"About 100–300 ms decision","Settlement":"Scheme batch, T+1","Hours":"24/7, with scheme STIP fallback","Who pays":"Not applicable","Addressing":"BIN routing"},
+    use:["Designing or supporting card authorisation platforms","Explaining declines and response codes","Planning issuer resilience and key management"],
+    watch:["Issuer outages fall back to scheme Stand-In Processing","Hold and clearing mismatches cause customer complaints","HSM key ceremonies and rotation are critical controls"],
+    exc:["Declines: 05 do not honour, 51 insufficient funds, 54 expired, 55 incorrect PIN","Scheme STIP approves while issuer is down, then sends an 0120 advice","Presentment arrives with no authorisation (force post)","Late presentment after the hold has expired","Duplicate request detected on STAN and RRN"]},
+  debit:{facts:{"Type":"Pull · card · single message","Speed":"Approval about 1 s","Settlement":"Net, RITS","Hours":"24/7","Who pays":"Merchant (low, cents)","Addressing":"Card number or token"},
+    use:["Everyday retail and groceries","Cash-out at the checkout","Merchants wanting the lowest card cost"],
+    watch:["Least-cost routing must be switched on with the acquirer","Dispute rights differ between eftpos and the international network","Offline (store-and-forward) transactions carry risk for the merchant"],
+    exc:["Response lost: terminal sends an 0420 reversal advice","Insufficient funds: response code 51","Terminal offline: store-and-forward within floor limits"]},
+  online:{facts:{"Type":"Pull · card-not-present","Speed":"Auth in seconds · capture later · payout T+1 to T+2","Settlement":"Net via acquirer; PSP pays out","Hours":"24/7","Who pays":"Merchant (blended PSP fee)","Addressing":"Network token"},
+    use:["E-commerce and in-app purchases","Subscriptions using a card on file","Marketplaces using a PSP's platform"],
+    watch:["Fraud on card-not-present payments, and 3DS friction at checkout","PCI DSS scope: use hosted fields","PSPs may hold reserves or delay payouts"],
+    exc:["Soft decline: retry with 3DS authentication","Authorisation expires before capture: re-authorise","Cancel before capture = void; after capture = refund","Webhooks delivered twice or late: use idempotency keys and status polling","Chargebacks: see the Chargeback play"]},
+  chargeback:{facts:{"Type":"Dispute process","Speed":"Weeks to months","Settlement":"Reversal through scheme settlement","Hours":"Scheme time limits (often up to 120 days)","Who pays":"Merchant (amount + fee) unless it wins","Addressing":"ARN"},
+    use:["Cardholder reports fraud, non-delivery, duplicates or goods not as described"],
+    watch:["High chargeback ratios trigger scheme monitoring programs and fines","Friendly fraud from genuine cardholders","Strict evidence deadlines"],
+    exc:["Merchant wins representment: funds return to the merchant","Pre-arbitration, then arbitration decided by the scheme","Merchant has failed: the acquirer carries the loss"]},
+  "bank-out":{facts:{"Type":"Inside the sending bank","Speed":"Seconds end to end (NPP)","Settlement":"Gross, FSS","Hours":"24/7","Who pays":"Bank cost; usually free to customers","Addressing":"PayID or BSB + account"},
+    use:["Designing a payment hub or orchestration layer","Writing operations runbooks","Understanding where scam and sanctions controls sit"],
+    watch:["Scams on authorised push payments","Liquidity at night and on weekends","Duplicate submissions from channel retries"],
+    exc:["pacs.002 RJCT (AC01, AC04, AG01): reverse the debit and tell the customer","Fraud hold: payment paused for review or a call","Sanctions match: compliance review before release","Liquidity short: payment queues until treasury tops up","Mistaken or scam payment: recall with camt.056"]},
+  "bank-in":{facts:{"Type":"Inside the receiving bank","Speed":"Seconds","Settlement":"Gross, FSS","Hours":"24/7","Who pays":"Not applicable","Addressing":"BSB + account"},
+    use:["Designing inbound processing","Setting mule-account controls","Handling returns and recalls"],
+    watch:["Never credit before settlement is confirmed","Mule accounts receiving scam proceeds","Tight time budget for accept or reject"],
+    exc:["Account closed or blocked: reject with pacs.002 before settlement","Funds can't be applied after settlement: return with pacs.004","Recall request (camt.056): investigate and answer with camt.029"]},
+  "becs-credit":{facts:{"Type":"Push · batch","Speed":"Same or next business day","Settlement":"Net, intraday LVSS sessions","Hours":"Business days","Who pays":"Payer business (per item or file)","Addressing":"BSB + account"},
+    use:["Payroll","Supplier payment runs","Government benefits"],
+    watch:["Cut-off times","Name is not checked unless Confirmation of Payee is used","Volumes are migrating to the NPP"],
+    exc:["Return record (type 2) with a reason code","File rejected because totals don't match","Mistaken payment to the wrong account"]},
+  "becs-debit":{facts:{"Type":"Pull · batch","Speed":"1–3 days including the dishonour window","Settlement":"Net, LVSS","Hours":"Business days","Who pays":"Biller","Addressing":"BSB + account + DDR"},
+    use:["Utilities, loans, insurance, memberships"],
+    watch:["Dishonours and fees","Customers can dispute debits through their own bank","Sponsor bank is liable for the biller's debits"],
+    exc:["Dishonour for insufficient funds","Claim of unauthorised debit","Customer cancels the DDR"]},
+  npp:{facts:{"Type":"Push · real time","Speed":"Seconds","Settlement":"Gross, FSS","Hours":"24/7/365","Who pays":"Low per-item fees","Addressing":"PayID or BSB + account"},
+    use:["Person-to-person","Urgent business payments and refunds","Real-time payroll and payouts"],
+    watch:["Scams: payments are irrevocable once settled","Some institutions are not reachable on the NPP","Per-payment limits set by banks"],
+    exc:["Rejected before settlement (pacs.002 RJCT)","Recall after settlement (camt.056)","Mistaken internet payment under the ePayments Code"]},
+  payto:{facts:{"Type":"Pull-initiated, push-executed","Speed":"Seconds","Settlement":"Gross, FSS","Hours":"24/7","Who pays":"Payee (cents)","Addressing":"Agreement + PayID or BSB"},
+    use:["Subscriptions and recurring billing","Wallet top-ups and account-based checkout","Replacing BECS direct debit"],
+    watch:["Customer must approve in their banking app (onboarding step)","Coverage across all banks","Agreements can be paused by the customer at any time"],
+    exc:["Agreement paused or cancelled: initiation rejected","Insufficient funds: rejected immediately, no later dishonour","Amount exceeds the agreement limit"]},
+  bpay:{facts:{"Type":"Push · batch","Speed":"Next business day","Settlement":"Net, RITS","Hours":"Batch","Who pays":"Biller","Addressing":"Biller Code + CRN"},
+    use:["Bills, tax, council rates, education fees"],
+    watch:["Not real time","CRN typos (check digits catch most)"],
+    exc:["Invalid CRN rejected at entry","Error correction and payment investigation","Mistaken payment to the wrong biller"]},
+  cheque:{facts:{"Type":"Pull · paper","Speed":"About 3 business days","Settlement":"Net, LVSS","Hours":"Business days","Who pays":"Mixed","Addressing":"MICR line"},
+    use:["Legacy only"],
+    watch:["Being wound down by government and industry","Dishonour risk until cleared"],
+    exc:["Dishonour (insufficient funds, irregularity)","Stop payment","Altered or forged cheque"]},
+  rtgs:{facts:{"Type":"Push · high value","Speed":"Minutes","Settlement":"Gross, RTGS","Hours":"RITS operating hours","Who pays":"Payer","Addressing":"BIC + account"},
+    use:["Corporate treasury","Property settlement (via PEXA)","FX and interbank payments"],
+    watch:["Liquidity and cut-off times","Higher fees per payment"],
+    exc:["Queued in RITS until the paying bank has liquidity","Rejected by the receiving bank","Investigation and recall through SWIFT"]},
+  intl:{facts:{"Type":"Push · cross-border","Speed":"Hours to days","Settlement":"Via correspondent banks","Hours":"Varies by corridor","Who pays":"Sender and receiver (fees + FX)","Addressing":"BIC + account"},
+    use:["Trade payments","Remittances","Paying overseas suppliers"],
+    watch:["FX margin is often the largest cost","Intermediary banks deduct fees","Sanctions and AML holds"],
+    exc:["Returned for a missing or wrong beneficiary","Repair queue for incomplete data","Compliance hold for screening","Tracking with SWIFT gpi (UETR)"]},
+  bnpl:{facts:{"Type":"Pull · instalments","Speed":"Merchant paid per contract","Settlement":"Provider's banking rails","Hours":"24/7","Who pays":"Merchant (high fee)","Addressing":"Account with the provider"},
+    use:["Retail checkout to lift conversion and basket size"],
+    watch:["Merchant fee much higher than cards","Regulated as credit since June 2025","Missed payments and late fees"],
+    exc:["Missed instalment: capped late fee, account paused","Refund: remaining instalments adjusted","Dispute handled by the provider"]}
+};
+
+/* ---------- Rail chooser ---------- */
+const RAILS={
+  debit:{name:"eftpos debit with least-cost routing",speed:2,cost:3,cert:3,max:5e3},
+  credit:{name:"Credit card (in store)",speed:2,cost:1,cert:3,max:2e4},
+  online:{name:"Online card via a payment gateway",speed:2,cost:1,cert:2,max:2e4},
+  payto:{name:"PayTo",speed:3,cost:3,cert:3,max:1e5},
+  "becs-debit":{name:"BECS direct debit",speed:1,cost:3,cert:1,max:1e6},
+  "becs-credit":{name:"BECS direct credit",speed:1,cost:3,cert:2,max:1e6},
+  npp:{name:"NPP / Osko",speed:3,cost:3,cert:3,max:1e5},
+  bpay:{name:"BPAY",speed:1,cost:2,cert:2,max:1e6},
+  rtgs:{name:"High-value RTGS (HVCS)",speed:2,cost:1,cert:3,max:1e12},
+  intl:{name:"International SWIFT transfer",speed:1,cost:1,cert:2,max:1e12},
+  bnpl:{name:"Buy Now Pay Later",speed:2,cost:1,cert:3,max:2e3}
+};
+const CASES={
+  instore:{label:"In-store checkout",rails:["debit","credit","bnpl"],why:{debit:"Lowest card cost when routed over eftpos.",credit:"Customers expect it; highest cost.",bnpl:"Can lift basket size; high merchant fee."}},
+  online:{label:"Online checkout",rails:["online","payto","bnpl"],why:{online:"Universal acceptance, tokens and 3DS through a gateway.",payto:"Account-to-account checkout with no card fees or chargebacks.",bnpl:"Popular with younger shoppers; high fee."}},
+  recurring:{label:"Recurring billing / subscription",rails:["payto","becs-debit","online"],why:{payto:"Real-time, no dishonours, customer controls it in their app.",["becs-debit"]:"Cheap and familiar, but dishonours and 1–3 day delay.",online:"Card on file works everywhere; higher fees and card expiry churn."}},
+  bill:{label:"Customer pays a bill",rails:["bpay","npp","payto"],why:{bpay:"CRN gives automatic reconciliation; next-day settlement.",npp:"Instant, with up to 280 characters of remittance data.",payto:"Lets the biller collect on the due date with consent."}},
+  payroll:{label:"Payroll or bulk payouts",rails:["becs-credit","npp"],why:{["becs-credit"]:"Cheap ABA batch files; same or next-day.",npp:"Real-time payroll and on-demand pay; check per-payment limits."}},
+  p2p:{label:"Person to person",rails:["npp"],why:{npp:"Osko via PayID, with name check, in seconds."}},
+  b2b:{label:"Large or time-critical business payment",rails:["rtgs","npp","becs-credit"],why:{rtgs:"Final, same-day gross settlement for large values.",npp:"Fast for values within bank limits.",["becs-credit"]:"Cheap if next-day is acceptable."}},
+  xb:{label:"Cross-border",rails:["intl"],why:{intl:"Correspondent banking over SWIFT; compare FX margins and fees."}}
+};
+
+/* ---------- Comparison ---------- */
+const CMP=[
+  {rail:"Credit card (Visa/MC)",type:"Pull",addr:"Card / token",speed:"Approval instant; payout T+0–T+2",settle:"Net, ~T+1",rt:false,h247:true,cost:"Merchant (MSF)",uses:"Retail, online, travel",play:"credit"},
+  {rail:"Debit (eftpos / DNDC)",type:"Pull",addr:"Card / token",speed:"Approval instant",settle:"Net, RITS",rt:false,h247:true,cost:"Merchant (low with LCR)",uses:"Everyday retail",play:"debit"},
+  {rail:"Online card (gateway)",type:"Pull",addr:"Token",speed:"Auth instant; payout T+1–T+2",settle:"Net via acquirer",rt:false,h247:true,cost:"Merchant (blended PSP fee)",uses:"E-commerce, subscriptions",play:"online"},
+  {rail:"BECS direct credit",type:"Push",addr:"BSB + account",speed:"Same / next business day",settle:"Net, LVSS batches",rt:false,h247:false,cost:"Payer business",uses:"Payroll, suppliers",play:"becs-credit"},
+  {rail:"BECS direct debit",type:"Pull",addr:"BSB + account + DDR",speed:"1–3 days",settle:"Net, LVSS",rt:false,h247:false,cost:"Biller",uses:"Utilities, loans",play:"becs-debit"},
+  {rail:"NPP / Osko",type:"Push",addr:"PayID or BSB + account",speed:"Seconds",settle:"Gross, real time (FSS)",rt:true,h247:true,cost:"Low per item",uses:"P2P, business, payroll",play:"npp"},
+  {rail:"PayTo",type:"Pull",addr:"Agreement + PayID / BSB",speed:"Seconds",settle:"Gross, real time (FSS)",rt:true,h247:true,cost:"Payee (cents)",uses:"Subscriptions, top-ups",play:"payto"},
+  {rail:"BPAY",type:"Push",addr:"Biller Code + CRN",speed:"Next business day",settle:"Net, RITS",rt:false,h247:false,cost:"Biller",uses:"Bills, tax, rates",play:"bpay"},
+  {rail:"Cheque",type:"Pull",addr:"MICR line",speed:"~3 days",settle:"Net, LVSS",rt:false,h247:false,cost:"Mixed",uses:"Legacy",play:"cheque"},
+  {rail:"HVCS (RTGS)",type:"Push",addr:"BIC + account",speed:"Minutes",settle:"Gross, RTGS",rt:true,h247:false,cost:"Payer",uses:"Treasury, property, FX",play:"rtgs"},
+  {rail:"International (SWIFT)",type:"Push",addr:"BIC + account",speed:"Hours to days",settle:"Via correspondents",rt:false,h247:false,cost:"Fees + FX",uses:"Trade, remittance",play:"intl"},
+  {rail:"BNPL",type:"Pull",addr:"Provider account",speed:"Per contract",settle:"Provider rails",rt:false,h247:true,cost:"Merchant (high)",uses:"Retail checkout",play:"bnpl"}
+];
+
+/* ---------- Quiz ---------- */
+const QUIZ=[
+  {q:"Which part of RITS settles NPP payments 24/7?",o:["LVSS","FSS","Austraclear","CHESS"],a:1,w:"The Fast Settlement Service settles each NPP payment individually and in real time against banks' ESAs."},
+  {q:"In a four-party card scheme, who pays interchange?",o:["The issuer pays the acquirer","The acquirer pays the issuer","The cardholder pays the scheme","The merchant pays the RBA"],a:1,w:"Interchange flows from the acquirer to the issuer on each transaction. The acquirer recovers it from the merchant through the MSF."},
+  {q:"Which ISO 8583 MTI is an authorisation request?",o:["0100","0200","0400","0800"],a:0,w:"0100/0110 is authorisation request and response. 0200 is a financial (single-message) request, 0400 a reversal, 0800 network management."},
+  {q:"eftpos is described as a single-message system. What does that mean?",o:["Only one card per account","One 0200 message both authorises and creates the financial record","Settlement happens in one daily batch","Only one network can be used"],a:1,w:"With single message there is no separate clearing file: the 0200 carries the financial record."},
+  {q:"Which message tells a bank that an NPP payment has settled?",o:["pain.001","pacs.008","pacs.002 with status ACSC","camt.053"],a:2,w:"pacs.002 is the payment status report. ACSC means accepted, settlement completed."},
+  {q:"What does least-cost routing do?",o:["Picks the cheapest acquirer","Routes a dual-network debit transaction over the cheaper network for the merchant","Batches payments to save fees","Removes surcharges"],a:1,w:"LCR lets the acquirer send a dual-network debit tap over eftpos (often cheaper) instead of the international network."},
+  {q:"In the HVCS Y-copy model, when does the beneficiary bank get the payment message?",o:["Before settlement, so it can check the account","At the same time as RITS","Only after RITS has settled the payment","At end of day"],a:2,w:"SWIFT holds the message, sends RITS the settlement details, and releases the full message only after RITS settles."},
+  {q:"Which ABA record type holds the file totals?",o:["Type 0","Type 1","Type 2","Type 7"],a:3,w:"Type 0 is the header, type 1 a detail record, type 2 a return and type 7 the file total record."},
+  {q:"What is the NPP service designed to replace BECS direct debit?",o:["Osko","PayID","PayTo","BPAY"],a:2,w:"PayTo lets the payer approve a payment agreement in their banking app; the payee then initiates real-time payments."},
+  {q:"Who decides whether to challenge the shopper in EMV 3-D Secure?",o:["The merchant","The Directory Server","The issuer's ACS","The acquirer"],a:2,w:"The issuer's Access Control Server scores the AReq and decides frictionless or challenge."},
+  {q:"Where does a bank hold value between debiting the customer and interbank settlement?",o:["The customer's savings account","A suspense (clearing) account in its general ledger","The RBA's cash reserve","The scheme's escrow"],a:1,w:"The payment hub debits the customer and credits an outward suspense account, cleared against the ESA once settlement is confirmed."},
+  {q:"Which report goes to AUSTRAC for transfers into or out of Australia?",o:["TTR","IFTI","SMR","ePayments report"],a:1,w:"An International Funds Transfer Instruction (IFTI) report is required for cross-border transfers."}
+];
+
+/* ---------- Utilities ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const AUD=new Intl.NumberFormat("en-AU",{style:"currency",currency:"AUD"});
+const fmt=v=>(v>0.004?"+":"")+AUD.format(Math.abs(v)<0.005?0:v);
+const store={get(k,d){try{const v=localStorage.getItem("aupb."+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem("aupb."+k,JSON.stringify(v));}catch(e){}}};
+const NS="http://www.w3.org/2000/svg";
+const svgEl=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;};
+const TYPE_COLOR={person:"--person",business:"--business",bank:"--bank",scheme:"--scheme",infra:"--infra",reg:"--reg",sys:"--sys"};
+const PLAYS=SCENARIOS.map(s=>s.id);
+const byId=Object.fromEntries(SCENARIOS.map(s=>[s.id,s]));
+let reviewed=new Set(store.get("reviewed",[]));
+
+/* ---------- Index / navigation ---------- */
+const SECTIONS=[
+  {h:"Start here",items:[["start","Overview"],["landscape","Who's who"],["concepts","Core concepts"],["settlement","Settlement: RITS and ESAs"]]},
+  ...[...new Set(SCENARIOS.map(s=>s.group))].map(g=>({h:"Plays · "+g,plays:SCENARIOS.filter(s=>s.group===g).map(s=>s.id)})),
+  {h:"Tools",items:[["chooser","Rail chooser"],["compare","Compare rails"]]},
+  {h:"Reference",items:[["messages","Message types"],["glossary","Glossary"],["risk","Regulation and risk"],["quiz","Knowledge check"]]}
+];
+function shortName(id){return byId[id].name.replace(/\s*\(.*?\)\s*/g," ").trim();}
+function buildIndex(){
+  let n=0;
+  $("index").innerHTML=SECTIONS.map(s=>`<h4>${esc(s.h)}</h4>`+(s.items?s.items.map(([id,l])=>`<a href="#${id}" data-r="${id}">${esc(l)}</a>`).join(""):
+    s.plays.map(id=>{n++;return `<a href="#${id}" data-r="${id}"><span class="n">${String(n).padStart(2,"0")}</span>${esc(shortName(id))}<span class="tick${reviewed.has(id)?" done":""}">✓</span></a>`;}).join(""))).join("");
+}
+function updateProgress(){
+  $("progTxt").textContent=`${[...reviewed].filter(id=>byId[id]).length}/${PLAYS.length}`;
+  $("progBar").style.width=([...reviewed].filter(id=>byId[id]).length/PLAYS.length*100)+"%";
+  document.querySelectorAll(".index a[data-r]").forEach(a=>{const t=a.querySelector(".tick");if(t)t.classList.toggle("done",reviewed.has(a.dataset.r));});
+}
+$("menuBtn").onclick=()=>{const o=$("index").classList.toggle("open");$("menuBtn").setAttribute("aria-expanded",o);};
+$("index").addEventListener("click",e=>{if(e.target.closest("a"))$("index").classList.remove("open");});
+
+/* ---------- Routing ---------- */
+let cur={route:"start",step:null};
+function route(){
+  let h=(location.hash||"#start").slice(1), step=null;
+  const m=h.match(/^(.+)-s(\d+)$/); if(m&&byId[m[1]]){h=m[1];step=+m[2]-1;}
+  if(!byId[h]&&!document.querySelector(`[data-view="${h}"]`)) h="start";
+  cur={route:h,step};
+  document.querySelectorAll(".view").forEach(v=>v.hidden=true);
+  if(byId[h]){ renderPlay(h,step); $("playView").hidden=false; }
+  else { document.querySelector(`[data-view="${h}"]`).hidden=false; if(h==="start")renderStart(); }
+  document.querySelectorAll(".index a").forEach(a=>a.classList.toggle("on",a.dataset.r===h));
+  const on=document.querySelector(".index a.on"); if(on)on.scrollIntoView({block:"nearest"});
+  if(step==null) window.scrollTo(0,0);
+}
+window.addEventListener("hashchange",route);
+
+/* ---------- Start ---------- */
+function renderStart(){
+  const groups=[...new Set(SCENARIOS.map(s=>s.group))];
+  $("startPlays").innerHTML=groups.map(g=>`<div><div class="kicker">${esc(g)}</div><div class="playlist">${
+    SCENARIOS.filter(s=>s.group===g).map(s=>`<a href="#${s.id}"><span>${esc(s.name)}</span><span class="st${reviewed.has(s.id)?" done":""}">${reviewed.has(s.id)?"✓ Reviewed":s.steps.length+" steps"}</span></a>`).join("")}</div></div>`).join("");
+}
+
+/* ---------- Concepts stepper ---------- */
+const STAGES=[
+  ["Initiation","The payer (push) or the payee (pull) starts the payment: a card tap, a banking app transfer, an ABA file, a PayTo initiation.","Card tap → EMV dialogue; NPP → pain.001 from the app; BECS → ABA file upload."],
+  ["Authorisation / validation","The institution checks the payment can go ahead: funds or credit, fraud score, sanctions, account status, limits.","Card → ISO 8583 0100 to the issuer; NPP → payee bank accepts with pacs.002; BECS → file validation."],
+  ["Clearing","Payment details are exchanged between institutions and each one works out what it owes.","Card → BASE II / IPM clearing files; BECS → files over COIN; NPP → pacs.008 through the Basic Infrastructure."],
+  ["Settlement","Interbank obligations are discharged by moving money between ESAs at the RBA. This is the point of finality.","NPP → FSS gross in seconds; HVCS → RTGS gross; cards, BECS, BPAY → net in LVSS or batches."],
+  ["Posting / funding","The payee's account is credited and the funds become available.","Merchant payout less MSF; salary credited; Osko funds available in seconds."],
+  ["Reconciliation and exceptions","Each party matches its records and handles anything that went wrong.","Returns (ABA type 2, pacs.004), recalls (camt.056), chargebacks, dishonours, GL vs ESA reconciliation."]
+];
+let stageOn=0;
+function renderStages(){
+  $("stages").innerHTML=STAGES.map((s,i)=>`<button aria-pressed="${i===stageOn}" data-i="${i}"><span class="n">${i+1} of ${STAGES.length}</span><b>${esc(s[0])}</b></button>`).join("");
+  const s=STAGES[stageOn];
+  $("stageBody").innerHTML=`<h3>${esc(s[0])}</h3><p style="margin-top:6px">${esc(s[1])}</p><p style="margin-top:8px;color:var(--muted);font-size:14px"><b>Examples:</b> ${esc(s[2])}</p>`;
+}
+$("stages").addEventListener("click",e=>{const b=e.target.closest("button");if(b){stageOn=+b.dataset.i;renderStages();}});
+
+/* ---------- Play view ---------- */
+let P={id:null,step:0,tab:"life",timer:null,phase:null};
+function finalBalances(sc){const b={};sc.ledger.forEach(id=>b[id]=0);sc.steps.forEach(s=>{if(s.led)for(const k in s.led)b[k]=(b[k]||0)+s.led[k];});return b;}
+function partyName(sc,id){return (sc.names&&sc.names[id])||sc.nodes.find(n=>n.id===id).label;}
+
+function renderPlay(id,step){
+  stopAuto();
+  const sc=byId[id], meta=META[id]||{facts:{},use:[],watch:[],exc:[]};
+  if(P.id!==id){P={id,step:0,tab:"life",timer:null,phase:null};}
+  if(step!=null&&step>=0&&step<sc.steps.length){P.step=step;P.tab="life";}
+  const idx=PLAYS.indexOf(id), prev=PLAYS[idx-1], next=PLAYS[idx+1];
+  const done=reviewed.has(id);
+  $("playView").innerHTML=`
+    <div class="eyebrow">Play ${String(idx+1).padStart(2,"0")} · ${esc(sc.group)}</div>
+    <div class="play-head">
+      <div style="min-width:0;flex:1 1 420px"><h2>${esc(sc.name)}</h2><p class="lead">${esc(sc.summary)}</p></div>
+      <div class="actions">
+        <a class="btn" href="${esc(PLAYER_URL)}#${esc(id)}" target="_blank" rel="noopener">▶ Animate ↗</a>
+        <button class="btn ${done?"done":""}" id="markBtn">${done?"✓ Reviewed":"Mark as reviewed"}</button>
+      </div>
+    </div>
+    <dl class="facts">${Object.entries(meta.facts).map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}<div><dt>Example</dt><dd>${esc(sc.amount)}</dd></div></dl>
+    <div class="grid g2" style="margin-top:12px">
+      <div class="card pad wc use"><h3>Use it for</h3><ul class="clean">${meta.use.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>
+      <div class="card pad wc watch"><h3>Watch out for</h3><ul class="clean">${meta.watch.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>
+    </div>
+    <div class="tabs" role="tablist">
+      ${[["life","Lifecycle · "+sc.steps.length+" steps"],["value","Value chain"],["msgs","Messages"],["exc","Exceptions"],["terms","Key terms"]].map(([k,l])=>`<button role="tab" data-t="${k}" aria-selected="${P.tab===k}">${esc(l)}</button>`).join("")}
+    </div>
+    <div class="tabpanel" id="tabpanel"></div>
+    <div class="playfoot">
+      ${prev?`<a class="btn" href="#${prev}">← ${esc(shortName(prev))}</a>`:"<span></span>"}
+      ${next?`<a class="btn primary" href="#${next}">Next play: ${esc(shortName(next))} →</a>`:`<a class="btn primary" href="#quiz">Take the knowledge check →</a>`}
+    </div>`;
+  $("markBtn").onclick=()=>{reviewed.has(id)?reviewed.delete(id):reviewed.add(id);store.set("reviewed",[...reviewed]);updateProgress();renderPlay(id,null);};
+  document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{P.tab=b.dataset.t;stopAuto();renderPlay(id,null);});
+  renderTab(sc,meta);
+}
+
+function renderTab(sc,meta){
+  const el=$("tabpanel");
+  if(P.tab==="life"){
+    const phases=[...new Set(sc.steps.map(s=>s.p))];
+    el.innerHTML=`<div class="phasebar">${phases.map(p=>`<button class="chip" data-p="${esc(p)}">${esc(p)}</button>`).join("")}</div>
+      <div class="life"><div class="seqwrap" id="seqwrap"></div><aside class="card stepcard" id="stepcard" aria-live="polite"></aside></div>`;
+    el.querySelectorAll(".phasebar .chip").forEach(b=>b.onclick=()=>{stopAuto();selectStep(sc.steps.findIndex(s=>s.p===b.dataset.p),true);});
+    drawSeq(sc); selectStep(P.step,cur.step!=null);
+  } else if(P.tab==="value"){
+    if(!sc.ledger.length){el.innerHTML=`<div class="card pad"><p>This play follows messages and systems inside one institution. No customer money changes hands, so there is no value chain to show. See the card plays for how interchange, scheme fees and MSF are shared.</p></div>`;return;}
+    const b=finalBalances(sc), rows=sc.ledger.map(k=>[partyName(sc,k),b[k]]);
+    const sum=rows.reduce((a,r)=>a+r[1],0); if(Math.abs(sum)>0.004) rows.push([sc.transit||"Other parties",-sum]);
+    const max=Math.max(...rows.map(r=>Math.abs(r[1])),1);
+    el.innerHTML=`<div class="card pad"><div class="kicker">Net position of each party at the end of the lifecycle</div>${rows.map(([n,v])=>{
+      const w=Math.abs(v)/max*50; const left=v<0?50-w:50;
+      return `<div class="vbar"><span>${esc(n)}</span><span class="track"><span class="mid"></span><i style="left:${left}%;width:${w}%;background:var(${v<0?"--neg":"--money"})"></i></span><span class="v ${v>0.004?"pos":v<-0.004?"neg":""}">${fmt(v)}</span></div>`;}).join("")}
+      <p style="margin-top:12px;color:var(--muted);font-size:14px">Positions sum to zero: every dollar paid is received by someone in the chain. Fees are illustrative.</p></div>
+      <div class="card pad" style="margin-top:12px"><div class="kicker">Money movements</div><div class="tablewrap" style="border:0"><table><thead><tr><th>#</th><th>Step</th><th>From → to</th><th>Effect</th></tr></thead><tbody>${
+        sc.steps.map((s,i)=>s.led?`<tr><td class="mono">${i+1}</td><td>${esc(s.l)}</td><td>${esc(nodeLabel(sc,s.f))} → ${esc(nodeLabel(sc,s.t))}</td><td>${Object.entries(s.led).map(([k,v])=>`${esc(partyName(sc,k))} <span class="${v>0?"pos":"neg"}">${fmt(v)}</span>`).join("<br>")}</td></tr>`:"").join("")}</tbody></table></div></div>`;
+  } else if(P.tab==="msgs"){
+    const rows=sc.steps.map((s,i)=>[s,i]).filter(([s])=>s.m);
+    el.innerHTML=`<div class="tablewrap"><table><thead><tr><th>Step</th><th>Format</th><th>Message</th><th>Between</th><th>Key fields</th></tr></thead><tbody>${
+      rows.map(([s,i])=>`<tr><td><a href="#${sc.id}-s${i+1}">${i+1}. ${esc(s.l)}</a></td><td><span class="fmt">${esc(s.m.f)}</span></td><td><b class="mono">${esc(s.m.id)}</b><br><span style="color:var(--muted);font-size:13px">${esc(s.m.n)}</span></td><td>${esc(nodeLabel(sc,s.f))}${s.f!==s.t?" → "+esc(nodeLabel(sc,s.t)):""}</td><td class="mono" style="font-size:12.5px">${(s.m.x||[]).map(esc).join("<br>")||"—"}</td></tr>`).join("")}</tbody></table></div>`;
+  } else if(P.tab==="exc"){
+    const key="chk."+sc.id, chk=store.get(key,{});
+    el.innerHTML=`<div class="card pad checklist"><div class="kicker">Exceptions to plan for: tick each one your process covers</div>${
+      meta.exc.map((x,i)=>`<label><input type="checkbox" id="exc-${sc.id}-${i}" data-i="${i}" ${chk[i]?"checked":""}><span>${esc(x)}</span></label>`).join("")}
+      <p style="margin-top:10px;color:var(--muted);font-size:13px">Ticks are saved only in this browser.</p></div>`;
+    el.querySelectorAll("input").forEach(c=>c.onchange=()=>{chk[c.dataset.i]=c.checked;store.set(key,chk);});
+  } else {
+    const terms=[...new Set(sc.steps.flatMap(s=>s.terms||[]))].filter(t=>GLOSSARY[t]).sort();
+    el.innerHTML=`<dl class="gl">${terms.map(t=>`<div><dt>${esc(t)}</dt><dd>${esc(GLOSSARY[t])}</dd></div>`).join("")}</dl>`;
+  }
+}
+function nodeLabel(sc,id){return sc.nodes.find(n=>n.id===id).label;}
+
+/* sequence diagram */
+const HEAD=58, ROW=34, BAND=24, PADL=14;
+function drawSeq(sc){
+  const lanes=[...sc.nodes].sort((a,b)=>a.x-b.x||a.y-b.y);
+  const avail=$("seqwrap").clientWidth||900, LW=Math.max(112,Math.min(160,Math.floor((avail-PADL*2-2)/lanes.length)));
+  const cx={}; lanes.forEach((n,i)=>cx[n.id]=PADL+i*LW+LW/2);
+  const W=PADL*2+lanes.length*LW;
+  let y=HEAD+10, prevP=null; const rows=[];
+  sc.steps.forEach((s,i)=>{ if(s.p!==prevP){rows.push({band:s.p,y});y+=BAND;prevP=s.p;} rows.push({i,s,y}); y+=ROW; });
+  const H=y+12;
+  const svg=svgEl("svg",{class:"seq",width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Sequence diagram"});
+  const defs=svgEl("defs",{},svg);
+  [["aMsg","--msg"],["aMoney","--money"]].forEach(([id,c])=>{const m=svgEl("marker",{id,viewBox:"0 0 10 10",refX:"9",refY:"5",markerWidth:"7",markerHeight:"7",orient:"auto-start-reverse"},defs);svgEl("path",{d:"M0,0 L10,5 L0,10 z",style:`fill:var(${c})`},m);});
+  lanes.forEach(n=>svgEl("line",{class:"lane",x1:cx[n.id],y1:HEAD,x2:cx[n.id],y2:H-6},svg));
+  rows.forEach(r=>{
+    if(r.band){const g=svgEl("g",{class:"phase"},svg);svgEl("rect",{x:0,y:r.y,width:W,height:BAND-4},g);const t=svgEl("text",{x:PADL,y:r.y+14},g);t.textContent=r.band;return;}
+    const s=r.s, g=svgEl("g",{class:"row","data-i":r.i},svg), mid=r.y+ROW/2+5;
+    svgEl("rect",{class:"hit",x:0,y:r.y,width:W,height:ROW},g);
+    const nt=svgEl("text",{class:"num",x:4,y:mid},g); nt.textContent=r.i+1;
+    const lab=s.l+(s.m&&s.m.id&&!s.l.includes(s.m.id)?"  ·  "+s.m.id:"");
+    if(s.k==="act"||s.f===s.t){
+      const x=cx[s.f], tw=Math.min(Math.max(lab.length*6.4+26,90),260), rx=Math.min(Math.max(x-tw/2,PADL),W-PADL-tw);
+      svgEl("rect",{class:"actbox",x:rx,y:r.y+5,width:tw,height:ROW-10,rx:6},g);
+      const t=svgEl("text",{class:"lab",x:rx+tw/2,y:mid,"text-anchor":"middle"},g); t.textContent="⚙ "+lab;
+    } else {
+      const x1=cx[s.f], x2=cx[s.t], dir=x2>x1?1:-1;
+      svgEl("line",{class:s.k,x1:x1+dir*4,y1:r.y+ROW-9,x2:x2-dir*4,y2:r.y+ROW-9,"marker-end":`url(#${s.k==="money"?"aMoney":"aMsg"})`},g);
+      const t=svgEl("text",{class:"lab",x:(x1+x2)/2,y:r.y+ROW-15,"text-anchor":"middle"},g); t.textContent=(s.k==="money"?"$ ":"")+lab;
+    }
+    g.addEventListener("click",()=>{stopAuto();selectStep(r.i,false);});
+  });
+  lanes.forEach(n=>{
+    const g=svgEl("g",{class:"head"},svg), x=cx[n.id]-LW/2+6;
+    svgEl("rect",{class:"box",x,y:6,width:LW-12,height:HEAD-12,rx:8},g);
+    svgEl("rect",{x:x+10,y:6,width:LW-32,height:3,rx:1.5,style:`fill:var(${TYPE_COLOR[n.type]})`},g);
+    const t=svgEl("text",{class:"l",x:cx[n.id],y:28,"text-anchor":"middle"},g); t.textContent=n.label;
+    const s=svgEl("text",{class:"s",x:cx[n.id],y:43,"text-anchor":"middle"},g); s.textContent=n.sub;
+  });
+  $("seqwrap").innerHTML=""; $("seqwrap").appendChild(svg);
+}
+
+function selectStep(i,scroll){
+  const sc=byId[P.id]; if(!sc) return;
+  i=Math.max(0,Math.min(sc.steps.length-1,i)); P.step=i;
+  document.querySelectorAll(".seq .row").forEach(g=>{const j=+g.dataset.i;g.classList.toggle("on",j===i);g.classList.toggle("done",j<i);});
+  document.querySelectorAll(".phasebar .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===sc.steps[i].p));
+  const s=sc.steps[i], kind={msg:"Message",money:"Money moves",act:"Processing"}[s.k];
+  const who=s.f===s.t?nodeLabel(sc,s.f):`${nodeLabel(sc,s.f)} → ${nodeLabel(sc,s.t)}`;
+  $("stepcard").innerHTML=`
+    <div class="meta"><span class="mono">Step ${i+1} / ${sc.steps.length}</span><span>· ${esc(s.p)}</span><span class="badge ${s.k}">${kind}</span></div>
+    <h3>${esc(s.l)}</h3><div class="who">${esc(who)}</div>
+    ${s.d?`<p class="desc">${esc(s.d)}</p>`:""}
+    ${s.led?`<p style="margin-top:8px;font-size:13.5px">${Object.entries(s.led).map(([k,v])=>`${esc(partyName(sc,k))} <b class="${v>0?"pos":"neg"}">${fmt(v)}</b>`).join(" · ")}</p>`:""}
+    ${s.m?`<div class="msgbox"><div class="mh"><span class="fmt">${esc(s.m.f)}</span><span class="mid">${esc(s.m.id)}</span><span>${esc(s.m.n)}</span></div>${s.m.x&&s.m.x.length?`<ul>${s.m.x.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}</div>`:""}
+    ${(s.terms||[]).length?`<div class="termchips">${s.terms.map(t=>`<button class="term" data-t="${esc(t)}">${esc(t)}</button>`).join("")}</div><div class="termdef" id="termdef" hidden></div>`:""}
+    <div class="stepnav">
+      <button class="btn" id="sPrev" ${i===0?"disabled":""} aria-label="Previous step">←</button>
+      <button class="btn primary" id="sAuto">${P.timer?"❚❚ Pause":"▶ Walk through"}</button>
+      <button class="btn" id="sNext" ${i===sc.steps.length-1?"disabled":""} aria-label="Next step">→</button>
+    </div>`;
+  $("sPrev").onclick=()=>{stopAuto();selectStep(P.step-1,true);};
+  $("sNext").onclick=()=>{stopAuto();selectStep(P.step+1,true);};
+  $("sAuto").onclick=()=>P.timer?stopAuto():startAuto();
+  $("stepcard").querySelectorAll(".term").forEach(b=>b.onclick=()=>{const d=$("termdef");d.innerHTML=`<b>${esc(b.dataset.t)}</b><br>${esc(GLOSSARY[b.dataset.t]||"")}`;d.hidden=false;});
+  if(scroll){const row=document.querySelector(`.seq .row[data-i="${i}"]`);if(row){const r=row.getBoundingClientRect();if(r.top<90||r.bottom>window.innerHeight-20)window.scrollBy({top:r.top-window.innerHeight/2,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});}}
+}
+function startAuto(){
+  const sc=byId[P.id]; if(P.step>=sc.steps.length-1) P.step=-1;
+  const tick=()=>{ if(P.step>=sc.steps.length-1){stopAuto();return;} selectStep(P.step+1,true);
+    const s=sc.steps[P.step], words=((s.d||"")+" "+(s.m?(s.m.x||[]).join(" "):"")).split(/\s+/).length;
+    P.timer=setTimeout(tick,Math.min(6000,Math.max(1400,words*110))); };
+  P.timer=setTimeout(()=>{},0); tick();
+}
+function stopAuto(){ if(P.timer){clearTimeout(P.timer);P.timer=null;} const b=$("sAuto"); if(b)b.textContent="▶ Walk through"; }
+document.addEventListener("keydown",e=>{
+  if(e.target.matches("input,textarea,select")||!byId[cur.route]||P.tab!=="life") return;
+  if(e.key==="ArrowRight"){e.preventDefault();stopAuto();selectStep(P.step+1,true);}
+  if(e.key==="ArrowLeft"){e.preventDefault();stopAuto();selectStep(P.step-1,true);}
+});
+
+/* ---------- Chooser ---------- */
+let CH=store.get("chooser",{use:"recurring",prio:"cost",speed:"days",amt:"small"});
+function renderChooser(){
+  const opt=(name,label,choices)=>`<div class="q"><div class="kicker">${label}</div><div class="chips">${choices.map(([v,l])=>`<button class="chip" data-n="${name}" data-v="${v}" aria-pressed="${CH[name]===v}">${esc(l)}</button>`).join("")}</div></div>`;
+  $("chooserForm").innerHTML=`<h3>Your situation</h3>`+
+    opt("use","What are you paying?",Object.entries(CASES).map(([k,c])=>[k,c.label]))+
+    opt("speed","How fast must the payee have the money?",[["seconds","Seconds"],["sameday","Same day"],["days","A day or two is fine"]])+
+    opt("prio","What matters most?",[["cost","Lowest cost"],["cert","Certainty (no dishonours or chargebacks)"],["ux","Familiar experience"]])+
+    opt("amt","Typical amount",[["small","Under $5k"],["mid","$5k–$100k"],["large","Over $100k"]]);
+  $("chooserForm").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{CH[b.dataset.n]=b.dataset.v;store.set("chooser",CH);renderChooser();});
+  const c=CASES[CH.use], amt={small:1e3,mid:5e4,large:5e5}[CH.amt];
+  const scored=c.rails.map((r,i)=>{const R=RAILS[r];let s=10-i*1.5;
+    if(CH.speed==="seconds")s+=(R.speed-2)*3; if(CH.speed==="sameday")s+=(R.speed>=2?1:-2);
+    if(CH.prio==="cost")s+=(R.cost-2)*2.5; if(CH.prio==="cert")s+=(R.cert-2)*2.5; if(CH.prio==="ux")s+=(i===0?1.5:0)+(r==="online"||r==="credit"||r==="bpay"?2:0);
+    if(amt>R.max)s-=8; return {r,R,s,why:c.why[r]};}).sort((a,b)=>b.s-a.s);
+  const bars=(n,lab)=>`<span style="font-size:12px;color:var(--muted)">${lab}</span><span class="meterbar">${[1,2,3].map(k=>`<i class="${k<=n?"on":""}"></i>`).join("")}</span>`;
+  const top=scored[0];
+  $("chooserOut").innerHTML=`<div class="card pad rec"><div class="kicker">Recommended</div><h3>${esc(top.R.name)}</h3><p style="margin-top:6px">${esc(top.why)}</p>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px"><div>${bars(top.R.speed,"Speed")}</div><div>${bars(top.R.cost,"Low cost")}</div><div>${bars(top.R.cert,"Certainty")}</div></div>
+    ${amt>top.R.max?`<p style="margin-top:10px;color:var(--warn);font-size:14px">This amount is above typical limits for this rail. Check with your bank.</p>`:""}
+    <div class="chips" style="margin-top:14px"><a class="btn primary" href="#${top.r}">Open the play</a></div></div>
+    ${scored.length>1?`<div class="card pad"><div class="kicker">Alternatives</div>${scored.slice(1).map((x,i)=>`<div class="alt"><span class="rank">${i+2}</span><div style="flex:1;min-width:0"><b>${esc(x.R.name)}</b><p style="color:var(--muted);font-size:14px">${esc(x.why)}${amt>x.R.max?" Above typical limits for this amount.":""}</p></div><a class="btn" href="#${x.r}">Play</a></div>`).join("")}</div>`:""}`;
+}
+
+/* ---------- Compare ---------- */
+let CF={type:"all",rt:false,h247:false,sort:null,dir:1};
+function renderCompare(){
+  const f=[["all","All"],["Push","Push"],["Pull","Pull"]];
+  $("cmpFilters").innerHTML=f.map(([v,l])=>`<button class="chip" data-type="${v}" aria-pressed="${CF.type===v}">${l}</button>`).join("")+
+    `<button class="chip" data-tog="rt" aria-pressed="${CF.rt}">Real-time settlement only</button><button class="chip" data-tog="h247" aria-pressed="${CF.h247}">Available 24/7</button>`;
+  $("cmpFilters").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{if(b.dataset.type)CF.type=b.dataset.type;else CF[b.dataset.tog]=!CF[b.dataset.tog];renderCompare();});
+  const cols=[["rail","Rail"],["type","Push / pull"],["addr","Addressing"],["speed","Speed to payee"],["settle","Interbank settlement"],["cost","Who pays"],["uses","Main uses"]];
+  let rows=CMP.filter(r=>(CF.type==="all"||r.type===CF.type)&&(!CF.rt||r.rt)&&(!CF.h247||r.h247));
+  if(CF.sort)rows=[...rows].sort((a,b)=>a[CF.sort].localeCompare(b[CF.sort])*CF.dir);
+  $("cmpTable").innerHTML=`<thead><tr>${cols.map(([k,l])=>`<th class="sort" data-k="${k}">${l}</th>`).join("")}<th>24/7</th></tr></thead><tbody>${
+    rows.map(r=>`<tr><td><a href="#${r.play}"><b>${esc(r.rail)}</b></a></td>${cols.slice(1).map(([k])=>`<td>${esc(r[k])}</td>`).join("")}<td>${r.h247?"Yes":"No"}</td></tr>`).join("")||`<tr><td colspan="8">No rails match these filters.</td></tr>`}</tbody>`;
+  $("cmpTable").querySelectorAll("th.sort").forEach(th=>th.onclick=()=>{CF.dir=CF.sort===th.dataset.k?-CF.dir:1;CF.sort=th.dataset.k;renderCompare();});
+}
+
+/* ---------- Messages ---------- */
+let refKey=Object.keys(REF)[0];
+function renderMessages(){
+  $("refTabs").innerHTML=Object.keys(REF).map(k=>`<button class="chip" data-k="${esc(k)}" aria-pressed="${k===refKey}">${esc(k)}</button>`).join("");
+  $("refTabs").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{refKey=b.dataset.k;renderMessages();});
+  $("refTable").innerHTML=`<thead><tr><th>Code</th><th>Meaning</th></tr></thead><tbody>${REF[refKey].map(([c,m])=>`<tr><td>${esc(c)}</td><td>${esc(m)}</td></tr>`).join("")}</tbody>`;
+  const use={};
+  SCENARIOS.forEach(sc=>sc.steps.forEach((s,i)=>{if(!s.m)return;const k=s.m.id;(use[k]=use[k]||{f:s.m.f,n:s.m.n,at:[]}).at.push([sc.id,i]);}));
+  const keys=Object.keys(use).sort((a,b)=>use[b].at.length-use[a].at.length).slice(0,40);
+  $("msgUse").innerHTML=`<thead><tr><th>Message</th><th>Format</th><th>Used in</th></tr></thead><tbody>${keys.map(k=>`<tr><td class="mono"><b>${esc(k)}</b><br><span style="color:var(--muted);font-family:var(--f-body);font-size:13px">${esc(use[k].n)}</span></td><td><span class="fmt">${esc(use[k].f)}</span></td><td>${
+    [...new Map(use[k].at.map(([id,i])=>[id,i])).entries()].map(([id,i])=>`<a href="#${id}-s${i+1}">${esc(shortName(id))}</a>`).join(" · ")}</td></tr>`).join("")}</tbody>`;
+}
+
+/* ---------- Glossary ---------- */
+let glLetter="All";
+function renderGlossary(){
+  const keys=Object.keys(GLOSSARY).sort((a,b)=>a.localeCompare(b,"en",{sensitivity:"base"}));
+  const letters=["All",...new Set(keys.map(k=>/[A-Za-z]/.test(k[0])?k[0].toUpperCase():"#"))];
+  $("glLetters").innerHTML=letters.map(l=>`<button class="chip" data-l="${l}" aria-pressed="${l===glLetter}">${l}</button>`).join("");
+  $("glLetters").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{glLetter=b.dataset.l;renderGlossary();});
+  $("glList").innerHTML=keys.filter(k=>glLetter==="All"||(/[A-Za-z]/.test(k[0])?k[0].toUpperCase():"#")===glLetter)
+    .map(k=>`<div id="term-${esc(k.replace(/[^a-z0-9]+/gi,"-"))}"><dt>${esc(k)}</dt><dd>${esc(GLOSSARY[k])}</dd></div>`).join("");
+}
+
+/* ---------- Quiz ---------- */
+let QA=store.get("quiz",{});
+function renderQuiz(){
+  let score=0,answered=0;
+  $("qzList").innerHTML=QUIZ.map((q,i)=>{const a=QA[i];if(a!=null){answered++;if(a===q.a)score++;}
+    return `<div class="card qz"><div class="kicker">Question ${i+1} of ${QUIZ.length}</div><h3>${esc(q.q)}</h3><div class="opts">${
+      q.o.map((o,j)=>`<button data-q="${i}" data-o="${j}" class="${a==null?"":j===q.a?"right":j===a?"wrong":""}" ${a!=null?"disabled":""}>${esc(o)}</button>`).join("")}</div>${
+      a!=null?`<p class="why"><b>${a===q.a?"Correct.":"Not quite."}</b> ${esc(q.w)}</p>`:""}</div>`;}).join("");
+  $("qzScore").textContent=`${score}/${QUIZ.length}`;
+  $("qzMsg").textContent=answered<QUIZ.length?`${answered} of ${QUIZ.length} answered.`:score>=10?"Excellent. You know your way around Australian payments.":score>=7?"Good work. Revisit the plays for the ones you missed.":"Worth another pass through the plays, then try again.";
+  $("qzList").querySelectorAll("button[data-q]").forEach(b=>b.onclick=()=>{QA[b.dataset.q]=+b.dataset.o;store.set("quiz",QA);renderQuiz();});
+}
+$("qzReset").onclick=()=>{QA={};store.set("quiz",QA);renderQuiz();};
+
+/* ---------- Search ---------- */
+const IDX=[];
+SCENARIOS.forEach(sc=>{IDX.push({t:sc.name,s:"Play · "+sc.group,h:sc.id,k:(sc.name+" "+sc.summary).toLowerCase()});
+  sc.steps.forEach((st,i)=>IDX.push({t:`${st.l}${st.m?" · "+st.m.id:""}`,s:`${shortName(sc.id)} · step ${i+1}`,h:`${sc.id}-s${i+1}`,k:(st.l+" "+(st.d||"")+" "+(st.m?st.m.f+" "+st.m.id+" "+st.m.n+" "+(st.m.x||[]).join(" "):"")).toLowerCase()}));});
+Object.keys(GLOSSARY).forEach(k=>IDX.push({t:k,s:"Glossary",h:"glossary",term:k,k:(k+" "+GLOSSARY[k]).toLowerCase()}));
+[["start","Overview"],["landscape","Who's who"],["concepts","Core concepts"],["settlement","Settlement: RITS and ESAs"],["chooser","Rail chooser"],["compare","Compare rails"],["messages","Message types"],["risk","Regulation and risk"],["quiz","Knowledge check"]].forEach(([h,t])=>IDX.push({t,s:"Section",h,k:t.toLowerCase()}));
+let hits=[],hitOn=0;
+function doSearch(){
+  const q=$("q").value.trim().toLowerCase();
+  if(q.length<2){$("results").hidden=true;return;}
+  const words=q.split(/\s+/);
+  hits=IDX.map(e=>{let sc=0;for(const w of words){if(!e.k.includes(w))return null;if(e.t.toLowerCase().includes(w))sc+=3;else sc+=1;}if(e.s==="Glossary"&&e.t.toLowerCase()===q)sc+=5;if(e.s.startsWith("Play"))sc+=1;return {e,sc};}).filter(Boolean).sort((a,b)=>b.sc-a.sc).slice(0,14).map(x=>x.e);
+  hitOn=0;
+  $("results").innerHTML=hits.length?hits.map((h,i)=>`<button data-i="${i}" class="${i===0?"on":""}">${esc(h.t)}<small>${esc(h.s)}</small></button>`).join(""):`<p style="padding:8px 10px;color:var(--muted);margin:0">No matches. Try a message ID such as pacs.008 or a term such as interchange.</p>`;
+  $("results").hidden=false;
+}
+function go(h){ $("results").hidden=true; $("q").value=""; if(h.term){glLetter="All";location.hash="glossary";renderGlossary();setTimeout(()=>{const el=document.getElementById("term-"+h.term.replace(/[^a-z0-9]+/gi,"-"));if(el){el.scrollIntoView({block:"center"});el.style.borderColor="var(--accent)";}},50);} else if(location.hash==="#"+h.h) route(); else location.hash=h.h; }
+$("q").addEventListener("input",doSearch);
+$("q").addEventListener("keydown",e=>{
+  if($("results").hidden)return;
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();hitOn=(hitOn+(e.key==="ArrowDown"?1:-1)+hits.length)%hits.length;$("results").querySelectorAll("button").forEach((b,i)=>b.classList.toggle("on",i===hitOn));}
+  if(e.key==="Enter"&&hits[hitOn]){e.preventDefault();go(hits[hitOn]);}
+  if(e.key==="Escape"){$("results").hidden=true;}
+});
+$("results").addEventListener("click",e=>{const b=e.target.closest("button");if(b)go(hits[+b.dataset.i]);});
+document.addEventListener("click",e=>{if(!e.target.closest(".search"))$("results").hidden=true;});
+
+/* ---------- Boot ---------- */
+buildIndex(); updateProgress(); renderStages(); renderChooser(); renderCompare(); renderMessages(); renderGlossary(); renderQuiz();
+route();
+</script>
+</body>
+</html>
