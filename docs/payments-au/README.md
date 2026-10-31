@@ -6,6 +6,8 @@ Status: Reference guide · Scope: Australian domestic retail, wholesale and cros
 
 > **Interactive playbook:** open [`payments-playbook.html`](./payments-playbook.html) for a play-by-play version of this guide. It has step-through sequence diagrams with message types, value chains, exception checklists, a rail chooser, a comparison table and a knowledge check.
 
+> **NPP and FSS deep dive:** [`npp-fss-playbook.html`](./npp-fss-playbook.html) is an interactive study playbook based on the RBA Bulletin article *The New Payments Platform and Fast Settlement Service* (Rush and Louw, September 2018), with simulators for FSS settlement and ESA liquidity trigger points.
+
 > **Accuracy note.** This guide describes how Australian payment systems are structured. Fees in the examples are **illustrative round numbers**, not real prices. Several policies are being reformed (RBA card-pricing and surcharging review, the end of cheques, the BECS-to-NPP migration, payments licensing). Check the current RBA, AusPayNet, AP+ and ASIC publications before relying on dates or caps.
 
 ---

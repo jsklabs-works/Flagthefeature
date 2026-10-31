@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NPP and FSS Playbook</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Interactive study playbook based on the RBA Bulletin article 'The New Payments Platform and Fast Settlement Service' (Rush and Louw, September 2018).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: same operations-manual shell as the payments playbook. Sticky header, left index of plays, one play per article section, each with an interactive model of the article's figures. */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --ink:#14212b; --muted:#566573; --line:#d6dde3; --soft:#e8edf1; --band:#eef3f6;
+  --accent:#0f6b8c; --accent-ink:#ffffff; --accent-soft:#d9edf4;
+  --net:#12865a; --net-soft:#e3f4ec; --bank:#2563c9; --bank-soft:#e3ecfa; --fss:#6a4bd6; --fss-soft:#ece7fb; --payer:#7a3fc4; --payee:#0e7c86;
+  --ok:#10875a; --warn:#b8661a; --neg:#c23a3a;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --shadow:0 1px 2px rgba(15,40,60,.06),0 6px 18px rgba(15,40,60,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1419; --surface:#141d24; --ink:#e4ebf0; --muted:#94a3b0; --line:#28343e; --soft:#1c2730; --band:#111a20;
+    --accent:#4fb3d6; --accent-ink:#06222c; --accent-soft:#16323d;
+    --net:#3fcb8f; --net-soft:#12291f; --bank:#6c9ff0; --bank-soft:#16243a; --fss:#a38bff; --fss-soft:#211b3b; --payer:#c08bff; --payee:#4fd1d9;
+    --ok:#3fcb8f; --warn:#eea35c; --neg:#ff7d7d;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1419; --surface:#141d24; --ink:#e4ebf0; --muted:#94a3b0; --line:#28343e; --soft:#1c2730; --band:#111a20;
+  --accent:#4fb3d6; --accent-ink:#06222c; --accent-soft:#16323d;
+  --net:#3fcb8f; --net-soft:#12291f; --bank:#6c9ff0; --bank-soft:#16243a; --fss:#a38bff; --fss-soft:#211b3b; --payer:#c08bff; --payee:#4fd1d9;
+  --ok:#3fcb8f; --warn:#eea35c; --neg:#ff7d7d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+a{color:var(--accent)}
+h1,h2,h3{font-family:var(--f-display);letter-spacing:-.005em;text-wrap:balance;margin:0}
+h1{font-size:34px;line-height:1.1} h2{font-size:25px;line-height:1.2} h3{font-size:17px;line-height:1.3}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono)}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{display:flex;align-items:center;gap:14px;height:60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:700;font-size:18px;white-space:nowrap;text-decoration:none;color:var(--ink)}
+.brand .mark{width:30px;height:26px;border-radius:6px;background:var(--net);display:grid;place-items:center;color:#fff;font-size:11px;font-family:var(--f-mono);font-weight:600}
+.top .src{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.progress-pill{font-size:13px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.meter{width:80px;height:6px;background:var(--soft);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.menu-btn{display:none;border:1px solid var(--line);background:var(--surface);border-radius:8px;height:38px;padding:0 12px;cursor:pointer}
+
+.shell{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:calc(100vh - 60px)}
+nav.index{position:sticky;top:calc(60px + env(safe-area-inset-top,0px));height:calc(100vh - 60px - env(safe-area-inset-top,0px));overflow:auto;border-right:1px solid var(--line);background:var(--surface);padding:14px 10px 40px max(10px,env(safe-area-inset-left,0px))}
+.index h4{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:16px 10px 6px;font-weight:600}
+.index h4:first-child{margin-top:4px}
+.index a{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:14px;line-height:1.3}
+.index a:hover{background:var(--soft)}
+.index a.on{background:var(--accent-soft);font-weight:600}
+.index a .n{font-family:var(--f-mono);font-size:11px;color:var(--muted);width:20px;flex:none}
+.index a .tick{margin-left:auto;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);flex:none;display:grid;place-items:center;font-size:10px;color:transparent}
+.index a .tick.done{background:var(--ok);border-color:var(--ok);color:#fff}
+main{min-width:0;padding-block:28px 64px;padding-left:max(16px,min(4vw,40px));padding-right:max(16px,env(safe-area-inset-right,0px),min(4vw,40px))}
+.view{max-width:1120px}
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  nav.index{position:fixed;left:0;top:calc(60px + env(safe-area-inset-top,0px));bottom:0;width:min(86vw,320px);height:auto;z-index:25;transform:translateX(-105%);transition:transform .2s;box-shadow:var(--shadow)}
+  nav.index.open{transform:none}
+  .menu-btn{display:inline-flex;align-items:center}
+  .top .src{display:none}
+  .progress-pill{margin-left:auto}
+}
+@media (max-width:520px){.progress-pill .label,.brand .t{display:none}}
+
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.lead{font-size:16.5px;color:var(--muted);max-width:70ch;margin-top:10px}
+.prose{max-width:72ch}
+.prose p{margin-top:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.pad{padding:16px 18px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.g4{grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr))}
+.stack{display:flex;flex-direction:column;gap:12px}
+.gap{margin-top:26px}
+.kicker{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:4px 11px;font-size:13px;background:var(--surface);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:14px;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+ul.clean{margin:8px 0 0;padding-left:18px} ul.clean li{margin:5px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--soft)}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.quote{border-left:3px solid var(--net);padding:4px 0 4px 14px;color:var(--ink);font-size:15.5px;max-width:72ch}
+.cite{font-size:12.5px;color:var(--muted);margin-top:6px}
+.note{font-size:13px;color:var(--muted)}
+.callout{border:1px dashed var(--line);border-radius:12px;padding:14px 16px;background:var(--band)}
+.callout .kicker{color:var(--warn)}
+.play-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.playfoot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:32px;padding-top:18px;border-top:1px solid var(--line)}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stats div{background:var(--surface);padding:14px 16px}
+.stats b{display:block;font-family:var(--f-display);font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+
+/* timeline */
+.tl{position:relative;margin-top:14px;padding-left:22px}
+.tl::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;position:relative}
+.tl button::before{content:"";position:absolute;left:-20px;top:14px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--muted)}
+.tl button:hover{background:var(--soft)}
+.tl button[aria-pressed="true"]{background:var(--accent-soft)}
+.tl button[aria-pressed="true"]::before{background:var(--accent);border-color:var(--accent)}
+.tl .d{font-family:var(--f-mono);font-size:12px;color:var(--muted);display:block}
+.tl b{font-family:var(--f-display);font-size:15px}
+.tlgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px;align-items:start}
+@media (max-width:820px){.tlgrid{grid-template-columns:minmax(0,1fr)}}
+
+/* objectives map */
+.objs{display:grid;gap:8px}
+.obj{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);gap:10px;align-items:center}
+.obj .a,.obj .b{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface);font-size:14px;min-height:56px;display:flex;align-items:center}
+.obj .b{border-color:var(--net);background:var(--net-soft)}
+.obj .arr{text-align:center;color:var(--net);font-weight:700}
+@media (max-width:640px){.obj{grid-template-columns:minmax(0,1fr)}.obj .arr{transform:rotate(90deg)}}
+
+/* figure 1 */
+.figwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:8px}
+svg.fig1{display:block;width:100%;min-width:640px;height:auto}
+.fig1 text{font-family:var(--f-body);fill:var(--ink)}
+.fig1 .c{cursor:pointer}
+.fig1 .c rect{transition:stroke-width .15s}
+.fig1 .c:hover rect.b{stroke-width:2.5}
+.fig1 .c.on rect.b{stroke:var(--ink);stroke-width:2.8}
+.fig1 .c.dim{opacity:.35}
+.fig1 .st path{fill:none;stroke:var(--line);stroke-width:2}
+.fig1 .st{pointer-events:none}
+.fig1 .st text{font-size:11.5px;fill:var(--muted);paint-order:stroke;stroke:var(--surface);stroke-width:3px}
+.fig1 .st.on path{stroke:var(--accent);stroke-width:3}
+.fig1 .st.on text{fill:var(--ink);font-weight:600}
+.fig1 .st.done path{stroke:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.fig1 .st.dash path{stroke-dasharray:6 5}
+.figgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1000px){.figgrid{grid-template-columns:minmax(0,1fr)}}
+.side{position:sticky;top:calc(76px + env(safe-area-inset-top,0px))}
+.stepnum{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.phase{display:inline-block;font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 9px;color:#fff;background:var(--net)}
+.phase.settle{background:var(--fss)} .phase.post{background:var(--payee)}
+.stepnav{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+
+/* simulators */
+.sim label.f{display:block;font-size:13px;color:var(--muted);margin-top:12px}
+.sim input[type=range]{width:100%;accent-color:var(--accent)}
+.sim input[type=number]{width:100%;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:0 10px}
+.sim .val{font-family:var(--f-mono);font-size:13px;color:var(--ink);float:right}
+.check{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px}
+.check input{accent-color:var(--accent);width:16px;height:16px}
+.flow{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.flow div{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;border:1px solid var(--line);font-size:14px;opacity:.35;transition:opacity .2s}
+.flow div.on{opacity:1}
+.flow div.pass{border-color:var(--ok)} .flow div.fail{border-color:var(--neg)}
+.flow .ic{width:22px;flex:none;font-weight:700;text-align:center}
+.flow .pass .ic{color:var(--ok)} .flow .fail .ic{color:var(--neg)}
+.bal{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.bal div{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.bal b{display:block;font-family:var(--f-display);font-size:22px;font-variant-numeric:tabular-nums}
+.bal span{font-size:12.5px;color:var(--muted)}
+.result{margin-top:12px;padding:12px 14px;border-radius:10px;font-size:14.5px}
+.result.ok{background:color-mix(in srgb,var(--ok) 12%,var(--surface));border:1px solid var(--ok)}
+.result.bad{background:color-mix(in srgb,var(--neg) 10%,var(--surface));border:1px solid var(--neg)}
+.log{margin-top:12px;max-height:220px;overflow:auto;font-family:var(--f-mono);font-size:12.5px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--band)}
+.log div{padding:3px 0;border-bottom:1px solid var(--soft)}
+.log div:last-child{border-bottom:0}
+svg.esa{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
+.esa text{font-family:var(--f-body);fill:var(--ink)}
+.esa .lbl{font-size:12px;fill:var(--muted)}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+
+/* charts */
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto}
+.chart text{font-family:var(--f-body);font-size:11px;fill:var(--muted)}
+.chart .grid line{stroke:var(--soft)}
+.chart .axis line{stroke:var(--line)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--surface);font-size:12.5px;padding:6px 9px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-100%);margin-top:-8px}
+
+/* resilience */
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px;margin-top:12px}
+.status div{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.status b{display:flex;align-items:center;gap:8px;font-size:14px}
+.status i{width:10px;height:10px;border-radius:50%;display:inline-block;background:var(--ok)}
+.status i.warn{background:var(--warn)} .status i.bad{background:var(--neg)}
+.status span{display:block;font-size:13px;color:var(--muted);margin-top:4px}
+
+/* quiz + glossary */
+.qz{padding:16px 18px}
+.qz .opts{display:grid;gap:6px;margin-top:10px}
+.qz .opts button{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 12px;cursor:pointer}
+.qz .opts button:hover{border-color:var(--accent)}
+.qz .opts button.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--surface))}
+.qz .opts button.wrong{border-color:var(--neg);background:color-mix(in srgb,var(--neg) 10%,var(--surface))}
+.qz .why{margin-top:10px;font-size:14px;color:var(--muted)}
+.scorebox{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.scorebox .big{font-family:var(--f-display);font-size:40px;font-weight:700;line-height:1}
+.gl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin-top:14px}
+.gl div{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.gl dt{font-weight:600}
+.gl dd{margin:3px 0 0;color:var(--muted);font-size:14px}
+.search{width:100%;max-width:380px;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 12px}
+footer.foot{margin-top:40px;font-size:12.5px;color:var(--muted);max-width:84ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <button class="menu-btn" id="menuBtn" aria-label="Open contents" aria-expanded="false">☰ Contents</button>
+    <a class="brand" href="#start"><span class="mark">NPP</span><span class="t">NPP and FSS Playbook</span></a>
+    <span class="src">Based on Rush and Louw, RBA Bulletin, September 2018</span>
+    <div class="progress-pill"><span class="label">Reviewed</span> <span id="progTxt">0/0</span><span class="meter"><i id="progBar"></i></span></div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="index" id="index" aria-label="Playbook contents"></nav>
+  <main>
+
+  <!-- START -->
+  <section class="view" data-view="start">
+    <div class="eyebrow">Study playbook · RBA Bulletin, September 2018</div>
+    <h1>The New Payments Platform and Fast Settlement Service</h1>
+    <p class="lead">An interactive walk through Alexandra Rush and Riaan Louw's article. It covers why Australia built real-time payments, how the NPP and the Reserve Bank's FSS work together, how banks manage liquidity around the clock, and what happened in the first six months.</p>
+    <div class="quote gap">“The NPP enables customers of financial institutions to make immediate payments 24 hours a day, every day of the week (‘24/7’). In conjunction with the development of the NPP, the Reserve Bank developed new infrastructure, the Fast Settlement Service (FSS), which provides for settlement of NPP transactions between financial institutions on a 24/7 basis across their Exchange Settlement Accounts (ESAs) at the Reserve Bank.”<div class="cite">Abstract</div></div>
+
+    <h3 class="gap">The article in numbers</h3>
+    <div class="stats" style="margin-top:10px">
+      <div><b>13 Feb 2018</b><span>NPP launched to the public</span></div>
+      <div><b>~50 ms</b><span>Median FSS settlement-processing time since launch</span></div>
+      <div><b>99.995%</b><span>Availability the Reserve Bank targets for the FSS</span></div>
+      <div><b>19.4m · $15.1b</b><span>Interbank transactions settled by the FSS to end August 2018</span></div>
+      <div><b>1.9m+</b><span>PayID registrations at end August 2018</span></div>
+      <div><b>65+</b><span>ADIs offering NPP services, up from ~50 at launch</span></div>
+      <div><b>12 hours</b><span>NPP can keep clearing without settlement in an extreme FSS disruption</span></div>
+      <div><b>~50m</b><span>Retail payments Australians make per business day</span></div>
+    </div>
+
+    <h3 class="gap">How to use this playbook</h3>
+    <div class="grid g3" style="margin-top:10px">
+      <div class="card pad"><div class="kicker">Read</div><p>Each play follows one section of the article, with direct quotes where precision matters.</p></div>
+      <div class="card pad"><div class="kicker">Try</div><p>Step through Figure 1, send settlement requests to a simulated FSS, and move ESA funds with trigger points as in Figure 2.</p></div>
+      <div class="card pad"><div class="kicker">Check</div><p>Mark plays as reviewed, then take the 12-question knowledge check. Progress is saved only in this browser.</p></div>
+    </div>
+    <div class="btnrow" style="margin-top:18px"><a class="btn primary" href="#why">Start: why fast payments →</a><a class="btn" href="#process">Jump to the payment walkthrough</a><a class="btn" href="payments-playbook.html#npp" target="_blank" rel="noopener">Related: NPP play in the payments playbook ↗</a></div>
+    <div id="startList" class="gap"></div>
+  </section>
+
+  <!-- WHY -->
+  <section class="view" data-view="why" hidden>
+    <div class="eyebrow">Play 01 · Background</div>
+    <h2>Why Australia needed fast payments</h2>
+    <div class="prose">
+      <p>Before the NPP, obligations between institutions from cheque, card and direct entry (DE) payments settled “on a deferred basis periodically throughout the day in aggregated batches” in RITS. Funds could take “between a few hours and a day in the case of DE transactions”, and “as long as a few days for cheques”. Weekends and public holidays extended these times.</p>
+      <p>From 2010 to 2012 the Payments System Board (PSB) ran a <b>Strategic Review of Innovation in the Payments System</b>. It found gaps in retail payments and set four strategic objectives. Select an objective to see how the NPP answers it.</p>
+    </div>
+    <div class="objs gap" id="objs"></div>
+    <div class="grid g2 gap">
+      <div class="card pad"><div class="kicker">From review to industry utility</div>
+        <ul class="clean">
+          <li>The PSB asked industry to find the best solution and endorsed a set of <b>Core Criteria</b> for assessing proposals (RBA 2012b).</li>
+          <li>Under APCA (now the Australian Payments Network), the <b>Real-Time Payments Committee</b> finalised an industry proposal in <b>February 2013</b>.</li>
+          <li><b>NPP Australia Limited (NPPA)</b> was set up with <b>13 members (12 ADIs and the Reserve Bank)</b> to develop and run the NPP as an industry utility.</li>
+        </ul></div>
+      <div class="card pad"><div class="kicker">International context</div>
+        <p>The PSB foresaw that without collaboration, Australian retail payment services “were at risk of falling behind those available in other countries”. Japan, Korea, Mexico and Switzerland had long had fast retail payments, and many more countries were building or upgrading them.</p></div>
+    </div>
+    <div class="playfoot" data-foot="why"></div>
+  </section>
+
+  <!-- BUILD -->
+  <section class="view" data-view="build" hidden>
+    <div class="eyebrow">Play 02 · NPP and FSS projects</div>
+    <h2>Building the NPP and the FSS</h2>
+    <p class="lead">The NPP needed ADIs to exchange individual payment messages and FSS settlement instructions in real time, and to post to customer accounts within a few seconds. The program ran in phases. Select a milestone.</p>
+    <div class="tlgrid gap">
+      <div class="tl" id="tl" role="group" aria-label="Project timeline"></div>
+      <div class="card pad side" id="tlBody"></div>
+    </div>
+    <div class="grid g3 gap">
+      <div class="card pad"><div class="kicker">Inside the ADIs</div><p>Participants ran large internal projects to upgrade payments processing and monitoring, internet banking and mobile apps.</p></div>
+      <div class="card pad"><div class="kicker">Inside the Reserve Bank</div><p>Besides building the FSS, the Bank introduced 24/7 shift work, upgraded building infrastructure for continuous operations, and worked with participants on liquidity for overnight and weekend settlement when the cash market is closed.</p></div>
+      <div class="card pad"><div class="kicker">The RBA as a participant</div><p>A separate Banking Department project let the Bank join the NPP itself, so government agencies can offer faster payments, such as emergency benefit payments by the Department of Human Services.</p></div>
+    </div>
+    <div class="playfoot" data-foot="build"></div>
+  </section>
+
+  <!-- INFRA -->
+  <section class="view" data-view="infra" hidden>
+    <div class="eyebrow">Play 03 · Overview of the infrastructure</div>
+    <h2>The components: NPP Basic Infrastructure, FSS and overlays</h2>
+    <p class="lead">Real-time payments rest on two new infrastructures: the NPP Basic Infrastructure (owned and operated by NPPA, run by SWIFT under contract) and the FSS (a RITS service run by the Reserve Bank). Select any component in the diagram, based on the article's Figure 1.</p>
+    <div class="figgrid gap">
+      <div class="figwrap" id="figInfra"></div>
+      <div class="card pad side" id="infraBody"></div>
+    </div>
+    <div class="playfoot" data-foot="infra"></div>
+  </section>
+
+  <!-- PROCESS -->
+  <section class="view" data-view="process" hidden>
+    <div class="eyebrow">Play 04 · How are NPP payments processed?</div>
+    <h2>An NPP payment in six steps</h2>
+    <p class="lead">For customers it takes moments. Behind it are clearing steps (the payer ADI confirms funds, the payee ADI confirms the account can receive NPP payments) and settlement steps (funds move between the ADIs), in quick succession.</p>
+    <div class="figgrid gap">
+      <div class="figwrap" id="figProc"></div>
+      <div class="card pad side" id="procBody" aria-live="polite"></div>
+    </div>
+    <div class="callout gap"><div class="kicker">Not routed through the FSS</div><p>Intrabank NPP transactions, and transactions between identified institutions that use the same sponsor, are not settled through the FSS.</p></div>
+    <div class="playfoot" data-foot="process"></div>
+  </section>
+
+  <!-- SETTLE -->
+  <section class="view" data-view="settle" hidden>
+    <div class="eyebrow">Play 05 · How are NPP payments settled by the FSS?</div>
+    <h2>Settle or reject, in about 50 milliseconds</h2>
+    <div class="prose">
+      <p>Each NPP payment is settled with finality “by simultaneously crediting and debiting ESAs held at the Reserve Bank”. The FSS reuses some RITS infrastructure (such as the user interface) but settles NPP payments independently of the <b>RITS System Queue</b>. Each institution splits its single ESA into an <b>FSS Allocation</b> and a <b>RITS Allocation</b>, and NPP payments settle using the FSS Allocation only.</p>
+    </div>
+    <div class="grid g2 gap" style="align-items:start">
+      <div class="card pad sim">
+        <h3>FSS settlement simulator</h3>
+        <p class="note" style="margin-top:4px">Send a settlement request from Institution A to Institution B. Amounts are examples.</p>
+        <label class="f" for="sA">Institution A FSS Allocation <span class="val" id="sAv"></span></label>
+        <input type="range" id="sA" min="0" max="2000000" step="50000" value="600000">
+        <label class="f" for="sAmt">Payment amount ($)</label>
+        <input type="number" id="sAmt" min="1" step="1" value="250000">
+        <label class="check"><input type="checkbox" id="sTech" checked> Request passes the FSS's technical criteria</label>
+        <div class="btnrow"><button class="btn primary" id="sGo">Send settlement request</button><button class="btn" id="sReset">Reset balances</button></div>
+        <div class="bal"><div><span>Institution A · FSS Allocation</span><b id="balA"></b></div><div><span>Institution B · FSS Allocation</span><b id="balB"></b></div></div>
+      </div>
+      <div class="card pad">
+        <div class="kicker">What the FSS does</div>
+        <div class="flow" id="sFlow">
+          <div data-k="recv"><span class="ic">1</span><span>Receives the settlement request from Institution A's payment gateway (ISO 20022)</span></div>
+          <div data-k="tech"><span class="ic">2</span><span>Tests the request against technical criteria</span></div>
+          <div data-k="funds"><span class="ic">3</span><span>Tests for sufficient funds in A's FSS Allocation</span></div>
+          <div data-k="out"><span class="ic">4</span><span>Settles irrevocably, or rejects</span></div>
+        </div>
+        <div id="sResult"></div>
+        <div class="log" id="sLog"><div>Log is empty. Send a request.</div></div>
+      </div>
+    </div>
+    <div class="grid g3 gap">
+      <div class="card pad"><div class="kicker">If testing succeeds</div><p>B's FSS Allocation is credited at the same moment A's is debited, and a settlement confirmation goes to both institutions.</p></div>
+      <div class="card pad"><div class="kicker">If it fails</div><p>For insufficient funds or any other validation error, the payment is rejected, settlement doesn't happen, and a rejection message goes back to the institutions.</p></div>
+      <div class="card pad"><div class="kicker">No recall</div><p>“In order to process and settle payments quickly, it is also not possible to recall NPP payments, since the FSS settles or rejects payments very quickly.”</p></div>
+    </div>
+    <div class="callout gap"><div class="kicker">Why real-time settlement matters</div><p>Because each payment settles with finality immediately, the FSS “eliminates credit risk”. ADIs can make funds available to customers without generating credit risk, and without other controls such as caps on exposures.</p></div>
+    <div class="playfoot" data-foot="settle"></div>
+  </section>
+
+  <!-- LIQUIDITY -->
+  <section class="view" data-view="liquidity" hidden>
+    <div class="eyebrow">Play 06 · Liquidity management</div>
+    <h2>Keeping the FSS Allocation funded, 24/7</h2>
+    <p class="lead">Institutions are encouraged to always keep enough funds in the FSS. With the FSS came a new RITS tool: upper and lower trigger points on the FSS Allocation. When one is reached, funds move automatically between the two allocations back to a reset point set by the institution. Try it below, modelled on the article's Figure 2.</p>
+    <div class="grid g2 gap" style="align-items:start">
+      <div class="card pad sim">
+        <h3>ESA position · Institution A</h3>
+        <svg class="esa" id="esaSvg" viewBox="0 0 440 300" role="img" aria-label="ESA split between FSS Allocation and RITS Allocation"></svg>
+        <div class="chips" style="margin-top:10px" role="group" aria-label="RITS status">
+          <button class="chip" id="lOpen" aria-pressed="true">Business day · RITS open (7.30 am–10 pm)</button>
+          <button class="chip" id="lClosed" aria-pressed="false">Night or weekend · RITS closed</button>
+        </div>
+        <div class="btnrow">
+          <button class="btn" data-l="-0.6">NPP payments out −$0.6m</button>
+          <button class="btn" data-l="0.6">NPP payments in +$0.6m</button>
+          <button class="btn" data-r="-1.5">RITS payment out −$1.5m</button>
+          <button class="btn" id="lReset">Manual reset</button>
+        </div>
+      </div>
+      <div class="card pad sim">
+        <h3>Your settings ($m)</h3>
+        <label class="f" for="lUp">Upper trigger point <span class="val" id="lUpv"></span></label><input type="range" id="lUp" min="1" max="6" step="0.1" value="4">
+        <label class="f" for="lRs">Reset point <span class="val" id="lRsv"></span></label><input type="range" id="lRs" min="0.5" max="5.5" step="0.1" value="2.5">
+        <label class="f" for="lLo">Lower trigger point <span class="val" id="lLov"></span></label><input type="range" id="lLo" min="0" max="5" step="0.1" value="1">
+        <div class="btnrow"><button class="btn" id="lRestart">Restart simulation</button></div>
+        <div class="log" id="lLog"></div>
+      </div>
+    </div>
+    <div class="grid g3 gap">
+      <div class="card pad"><div class="kicker">RITS hours vs FSS hours</div><p>RITS settles between 7.30 am and 10 pm on business days, while the FSS settles NPP transactions 24/7, “so all ESA funds are transferred to the FSS Allocation when RITS is not operating”.</p></div>
+      <div class="card pad"><div class="kicker">Intraday repos</div><p>Eligible institutions can use the Bank's Standing Facilities. Intraday repurchase agreements carry no interest charge but must be reversed later that day.</p></div>
+      <div class="card pad"><div class="kicker">Open repos</div><p>Offered to institutions that would otherwise regularly need intraday repos, and to those settling DE or FSS payments when the cash market is closed (overnight or weekends). Open repos have no fixed maturity date.</p></div>
+    </div>
+    <p class="note gap">The cash market is “the market where banks borrow and lend funds held in their ESAs, generally for one business day and on an unsecured basis” (footnote 2).</p>
+    <div class="playfoot" data-foot="liquidity"></div>
+  </section>
+
+  <!-- ACCESS -->
+  <section class="view" data-view="access" hidden>
+    <div class="eyebrow">Play 07 · Participation and connectivity</div>
+    <h2>Ways to connect to the NPP</h2>
+    <p class="lead">The NPP was designed to offer several ways for organisations to use its functionality. Answer the questions to see which model fits.</p>
+    <div class="grid g2 gap" style="align-items:start">
+      <div class="card pad" id="accForm"></div>
+      <div class="card pad" id="accOut" style="border:2px solid var(--accent)"></div>
+    </div>
+    <div class="tablewrap gap"><table>
+      <thead><tr><th>Model</th><th>Who</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><b>NPP participant</b></td><td>ADIs</td><td>Directly clears and/or settles NPP payments.</td></tr>
+        <tr><td><b>Identified institution</b></td><td>ADIs</td><td>Forms an agency arrangement with a <b>sponsor participant</b>, which clears and/or settles on its behalf. More than 55 banks, credit unions and building societies already offered fast payments this way.</td></tr>
+        <tr><td><b>Third-party access</b></td><td>Fintechs, corporates</td><td>Access through NPP participants or sponsoring organisations that provide institutional banking services.</td></tr>
+        <tr><td><b>Connected Institution</b> (future)</td><td>Non-ADIs meeting the criteria</td><td>Could get its own payment gateway and send non-value messages, such as payment initiation messages, that NPP participants process.</td></tr>
+      </tbody></table></div>
+    <div class="card pad gap"><div class="kicker">Gateway options for participants</div><ul class="clean"><li>Install their own payment gateway</li><li>Use another NPP participant's payment gateway</li><li>Use a third-party payment gateway provider</li></ul></div>
+    <div class="playfoot" data-foot="access"></div>
+  </section>
+
+  <!-- RESILIENCE -->
+  <section class="view" data-view="resilience" hidden>
+    <div class="eyebrow">Play 08 · Operating principles, risk and resilience</div>
+    <h2>Designed for continuous operation</h2>
+    <p class="lead">The NPP and FSS were built for real-time payments and continuous operations, with high standards for availability, capacity and security. The Reserve Bank targets <b>99.995 per cent</b> availability for the FSS. Pick a scenario to see which design features apply.</p>
+    <div class="chips gap" id="resTabs" role="group" aria-label="Scenarios"></div>
+    <div class="card pad" style="margin-top:12px" id="resBody"></div>
+    <div class="grid g2 gap">
+      <div class="card pad"><div class="kicker">For the payments system as a whole</div><ul class="clean"><li>A new way to make retail payments adds resilience.</li><li>Because it is an RTGS system, the NPP could, if required, be used as an alternative to traditional ways of making wholesale interbank payments through RITS.</li></ul></div>
+      <div class="card pad"><div class="kicker">A changed risk profile</div><p>Recipients face fewer delays in receiving funds, but real-time behaviour monitoring becomes more important, “as there is no delay for the recipient of a fraudulent payment to access the proceeds”. Each ADI is responsible for its own fraud monitoring.</p></div>
+    </div>
+    <p class="note gap">For more on resilience features, risks and mitigants, the article points to Box D of the Reserve Bank's April 2018 <i>Financial Stability Review</i>.</p>
+    <div class="playfoot" data-foot="resilience"></div>
+  </section>
+
+  <!-- ACTIVITY -->
+  <section class="view" data-view="activity" hidden>
+    <div class="eyebrow">Play 09 · Activity post launch</div>
+    <h2>The first six months</h2>
+    <div class="prose"><p>About 50 institutions launched in February 2018; by the end of August more than 65 ADIs had rolled out services. Volumes were deliberately constrained in the first weeks while institutions fine-tuned systems, and ADIs introduced services, channels and customer segments in stages. Adoption was gradual but sustained: over 1.9 million PayID registrations and, through the FSS, 19.4 million interbank transactions worth $15.1 billion to the end of August.</p></div>
+    <div class="card pad gap">
+      <div class="play-head"><div><div class="kicker">Graph 1 · FSS settlement activity, weekly total</div></div><div class="chips" id="g1Tabs"></div></div>
+      <div class="chart" id="g1"></div>
+    </div>
+    <div class="grid g2 gap">
+      <div class="card pad">
+        <div class="play-head"><div class="kicker">Intraday pattern · average per interval</div><div class="chips" id="g2Tabs"></div></div>
+        <div class="chart" id="g2"></div>
+        <p class="note" style="margin-top:8px">Value is higher between 9 am and 5 pm on business days, reflecting business payments. Volume stays high until around 9 pm, mostly consumers' lower-value payments. The early-morning spike is payments scheduled in advance by ADIs.</p>
+      </div>
+      <div class="card pad">
+        <div class="play-head"><div class="kicker">Day-of-week pattern · daily average</div><div class="chips" id="g3Tabs"></div></div>
+        <div class="chart" id="g3"></div>
+        <p class="note" style="margin-top:8px">A mid-week peak and weekend trough. Wednesday and Thursday peaks may reflect consumers paying on the days they receive salaries.</p>
+      </div>
+    </div>
+    <p class="note gap">Chart values are read approximately from the article's Graphs 1–3 (data 13 February to 31 August 2018) to show their shape; see the RBA article for exact figures. The text refers to the day-of-week chart as Graph 2 and the intraday chart as Graph 3, while the published images are labelled the other way round, so the charts here are named by content.</p>
+    <div class="playfoot" data-foot="activity"></div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="view" data-view="summary" hidden>
+    <div class="eyebrow">Play 10 · Summary</div>
+    <h2>What it adds up to</h2>
+    <div class="quote gap">“The NPP and FSS represent a significant development in the Australian payment system, with customers of financial institutions now having the ability to make immediate payments on a 24/7 basis with more easily remembered PayIDs. With the capacity to send detailed information along with these fast payments, the NPP has been designed to meet the needs of Australia's digital economy and has the potential to promote further innovation and competition in payments services in the years to come.”<div class="cite">Summary</div></div>
+    <h3 class="gap">Key takeaways</h3>
+    <div class="grid g2" style="margin-top:10px">
+      <div class="card pad"><div class="kicker">Clearing is decentralised</div><p>Payment gateways sit in each ADI's data centre; each ADI owns its speed, capacity and fraud monitoring.</p></div>
+      <div class="card pad"><div class="kicker">Settlement is central and final</div><p>The FSS settles each payment gross, in central bank money, in about 50 ms, so payees can be credited without credit risk.</p></div>
+      <div class="card pad"><div class="kicker">Liquidity is automated</div><p>Trigger and reset points move ESA funds between the FSS and RITS Allocations; all funds sit in the FSS when RITS is closed.</p></div>
+      <div class="card pad"><div class="kicker">Innovation sits on top</div><p>Overlay services like Osko can launch without every participant joining, encouraging competition.</p></div>
+    </div>
+    <div class="callout gap"><div class="kicker">Since 2018 · not from the article</div><p>Later developments include the merger of NPP Australia with BPAY Group and eftpos to form Australian Payments Plus (2022), and the launch of PayTo, an NPP service for payer-authorised payment agreements. See the related plays in the <a href="payments-playbook.html#payto" target="_blank" rel="noopener">payments playbook ↗</a>.</p></div>
+    <div class="btnrow gap"><a class="btn primary" href="#quiz">Take the knowledge check →</a></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="view" data-view="quiz" hidden>
+    <div class="eyebrow">Check</div>
+    <h2>Knowledge check</h2>
+    <div class="card pad gap scorebox"><span class="big" id="qzScore">0/0</span><span id="qzMsg" class="lead" style="margin:0"></span><button class="btn" id="qzReset" style="margin-left:auto">Clear answers</button></div>
+    <div id="qzList" class="stack" style="margin-top:14px"></div>
+  </section>
+
+  <!-- GLOSSARY -->
+  <section class="view" data-view="glossary" hidden>
+    <div class="eyebrow">Reference</div>
+    <h2>Glossary</h2>
+    <input class="search gap" id="gq" type="search" placeholder="Search terms" aria-label="Search glossary">
+    <dl class="gl" id="glList"></dl>
+  </section>
+
+  <!-- REFS -->
+  <section class="view" data-view="refs" hidden>
+    <div class="eyebrow">Reference</div>
+    <h2>Source, footnotes and references</h2>
+    <div class="card pad gap"><div class="kicker">Source article</div><p>Rush A and R Louw (2018), ‘The New Payments Platform and Fast Settlement Service’, RBA <i>Bulletin</i>, September, 20 September 2018. The authors are from the Reserve Bank's Payments Settlements Department.</p><p class="note" style="margin-top:8px">Original: rba.gov.au/publications/bulletin/2018/sep/the-new-payments-platform-and-fast-settlement-service.html</p></div>
+    <div class="card pad gap"><div class="kicker">Footnotes</div><ol class="clean">
+      <li>RTGS payments are payments made across accounts at a central bank on a continuous gross basis.</li>
+      <li>The cash market is the market where banks borrow and lend funds held in their ESAs, generally for one business day and on an unsecured basis (Hing, Kelly and Olivan 2016).</li>
+      <li>More on the standing facilities: rba.gov.au/mkt-operations/dom-mkt-oper.html</li></ol></div>
+    <div class="card pad gap"><div class="kicker">References</div><ul class="clean">
+      <li>APCA (2013), ‘Real-Time Payments Committee Proposed Way Forward’, 8 February.</li>
+      <li>ASX (2018), ‘CHESS Replacement: New Scope and Implementation Plan’, April.</li>
+      <li>Bolt S, D Emery and P Harrigan (2014), ‘Fast Retail Payment Systems’, RBA <i>Bulletin</i>, December, pp 43–51.</li>
+      <li>CPMI (2016), ‘Fast Payments – Enhancing the Speed and Availability of Retail Payments’, November.</li>
+      <li>Hing A, G Kelly and D Olivan (2016), ‘The Cash Market’, RBA <i>Bulletin</i>, December, pp 33–42.</li>
+      <li>KPMG and CBA (2018), ‘The NPP and Superannuation: A revolution in efficiency’, 28 February.</li>
+      <li>RBA (2012a), ‘Strategic Review of Innovation in the Payments System: Conclusions’, June.</li>
+      <li>RBA (2012b), ‘RBA Core Criteria for a ‘Fast Payments’ Solution’, <i>Strategic Review of Innovation in the Payments System</i>, November.</li>
+      <li>Richards T (2014), ‘The Path to Innovation in Payments Infrastructure in Australia’, Speech at the Chicago Payments Symposium, Chicago, 26 September.</li></ul></div>
+  </section>
+
+  <footer class="foot">An unofficial study aid based on the RBA Bulletin article by Alexandra Rush and Riaan Louw (September 2018). Quotes are from the article; figures are as at the end of August 2018. Interactive models simplify the systems they describe, and example amounts are illustrative. Read the original article for authoritative content.</footer>
+  </main>
+</div>
+
+<script>
+const PB_URL="payments-playbook.html";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const store={get(k,d){try{const v=localStorage.getItem("nppfss."+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem("nppfss."+k,JSON.stringify(v));}catch(e){}}};
+const NS="http://www.w3.org/2000/svg";
+const AUD0=new Intl.NumberFormat("en-AU",{style:"currency",currency:"AUD",maximumFractionDigits:0});
+
+/* ---------- Index & routing ---------- */
+const PLAYS=[["why","Why fast payments"],["build","Building the NPP and FSS"],["infra","The infrastructure"],["process","Processing a payment"],["settle","FSS settlement"],["liquidity","Liquidity management"],["access","Participation and connectivity"],["resilience","Risk and resilience"],["activity","Activity post launch"],["summary","Summary"]];
+const OTHER=[["Start here",[["start","Overview"]]],["Check and reference",[["quiz","Knowledge check"],["glossary","Glossary"],["refs","Source and references"]]]];
+let reviewed=new Set(store.get("reviewed",[]));
+function buildIndex(){
+  $("index").innerHTML=`<h4>${OTHER[0][0]}</h4>`+OTHER[0][1].map(([id,l])=>`<a href="#${id}" data-r="${id}">${l}</a>`).join("")+
+    `<h4>Plays</h4>`+PLAYS.map(([id,l],i)=>`<a href="#${id}" data-r="${id}"><span class="n">${String(i+1).padStart(2,"0")}</span>${esc(l)}<span class="tick${reviewed.has(id)?" done":""}">✓</span></a>`).join("")+
+    `<h4>${OTHER[1][0]}</h4>`+OTHER[1][1].map(([id,l])=>`<a href="#${id}" data-r="${id}">${l}</a>`).join("")+
+    `<h4>Related</h4><a href="${PB_URL}#npp" target="_blank" rel="noopener">Payments playbook: NPP ↗</a><a href="${PB_URL}#bank-out" target="_blank" rel="noopener">Inside the bank: outbound ↗</a><a href="${PB_URL}#payto" target="_blank" rel="noopener">PayTo ↗</a>`;
+}
+function progress(){
+  const n=PLAYS.filter(([id])=>reviewed.has(id)).length;
+  $("progTxt").textContent=`${n}/${PLAYS.length}`; $("progBar").style.width=(n/PLAYS.length*100)+"%";
+  document.querySelectorAll(".index a[data-r]").forEach(a=>{const t=a.querySelector(".tick");if(t)t.classList.toggle("done",reviewed.has(a.dataset.r));});
+}
+function foots(){
+  document.querySelectorAll("[data-foot]").forEach(el=>{
+    const id=el.dataset.foot, i=PLAYS.findIndex(p=>p[0]===id), prev=PLAYS[i-1], next=PLAYS[i+1], done=reviewed.has(id);
+    el.innerHTML=`${prev?`<a class="btn" href="#${prev[0]}">← ${esc(prev[1])}</a>`:`<a class="btn" href="#start">← Overview</a>`}
+      <button class="btn ${done?"done":""}" data-mark="${id}">${done?"✓ Reviewed":"Mark as reviewed"}</button>
+      ${next?`<a class="btn primary" href="#${next[0]}">Next: ${esc(next[1])} →</a>`:`<a class="btn primary" href="#quiz">Knowledge check →</a>`}`;
+  });
+  document.querySelectorAll("[data-mark]").forEach(b=>b.onclick=()=>{const id=b.dataset.mark;reviewed.has(id)?reviewed.delete(id):reviewed.add(id);store.set("reviewed",[...reviewed]);progress();foots();renderStart();});
+}
+function renderStart(){
+  $("startList").innerHTML=`<h3>Plays</h3><div class="grid g4" style="margin-top:10px">${PLAYS.map(([id,l],i)=>`<a class="card pad" href="#${id}" style="text-decoration:none;color:var(--ink)"><div class="kicker">Play ${String(i+1).padStart(2,"0")}${reviewed.has(id)?' · <span style="color:var(--ok)">✓ reviewed</span>':""}</div><b>${esc(l)}</b></a>`).join("")}</div>`;
+}
+function route(){
+  let h=(location.hash||"#start").slice(1); if(!document.querySelector(`[data-view="${h}"]`)) h="start";
+  document.querySelectorAll(".view").forEach(v=>v.hidden=v.dataset.view!==h);
+  document.querySelectorAll(".index a").forEach(a=>a.classList.toggle("on",a.dataset.r===h));
+  $("index").classList.remove("open");
+  if(h==="activity") drawCharts();
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange",route);
+$("menuBtn").onclick=()=>{const o=$("index").classList.toggle("open");$("menuBtn").setAttribute("aria-expanded",o);};
+
+/* ---------- Play 1: objectives ---------- */
+const OBJ=[
+  ["Make real-time retail payments","Payments clear and settle individually in real time; the payee's funds are available immediately."],
+  ["Send and receive low-value payments outside normal banking hours","NPP and the FSS operate 24 hours a day, every day of the year."],
+  ["Send more complete remittance information with payments","The NPP uses ISO 20022, a flexible, extensible standard that carries richer remittance information."],
+  ["Address payments in a relatively simple way","The addressing service links accounts to a PayID, such as an email address, phone number or ABN, and shows the payee's legal account name."]
+];
+let objOn=-1;
+function renderObjs(){
+  $("objs").innerHTML=OBJ.map((o,i)=>`<div class="obj"><button class="a chip" style="border-radius:10px;justify-content:flex-start;text-align:left" aria-pressed="${i===objOn}" data-i="${i}">${i+1}. ${esc(o[0])}</button><span class="arr">→</span><div class="b" ${objOn===-1||objOn===i?"":'style="opacity:.35"'}>${esc(o[1])}</div></div>`).join("");
+  $("objs").querySelectorAll("button").forEach(b=>b.onclick=()=>{objOn=objOn===+b.dataset.i?-1:+b.dataset.i;renderObjs();});
+}
+
+/* ---------- Play 2: timeline ---------- */
+const TL=[
+  ["2010–2012","PSB Strategic Review","The Payments System Board's Strategic Review of Innovation in the Payments System found gaps in retail payments and set strategic objectives. The PSB then endorsed Core Criteria for assessing industry proposals."],
+  ["February 2013","Industry proposal","APCA's Real-Time Payments Committee finalised an industry proposal for fast payments. NPP Australia Limited was established with 13 members: 12 ADIs and the Reserve Bank."],
+  ["June 2013","Phases 1 and 2","Program planning, business requirements and sourcing of service providers."],
+  ["December 2014","Phase 3: detailed design","Detailed infrastructure design, operating procedures, industry test strategy and the overall industry implementation plan."],
+  ["August 2015","Phase 4: build","Build and configuration of the core NPP elements: the network, the switching capability that coordinates messages across it, and the addressing service. Staged testing of the NPP and of ADIs' internal systems followed."],
+  ["In parallel","FSS built by the Reserve Bank","The FSS uses in-memory processing, an approach borrowed from some stock exchanges, for fast settlement. Median settlement-processing time since launch is around 50 milliseconds."],
+  ["27 November 2017","Live between participants","The NPP and FSS went live between institutions, with a period of 'live proving': a small number of real transactions to verify end-to-end systems in production."],
+  ["13 February 2018","Public launch","Fast payments became available to customers of around 50 participating financial institutions on launch day."]
+];
+let tlOn=7;
+function renderTL(){
+  $("tl").innerHTML=TL.map((t,i)=>`<button aria-pressed="${i===tlOn}" data-i="${i}"><span class="d">${esc(t[0])}</span><b>${esc(t[1])}</b></button>`).join("");
+  $("tlBody").innerHTML=`<div class="stepnum">${esc(TL[tlOn][0])}</div><h3 style="margin:4px 0 8px">${esc(TL[tlOn][1])}</h3><p>${esc(TL[tlOn][2])}</p>
+    <div class="stepnav"><button class="btn" ${tlOn===0?"disabled":""} id="tlP" aria-label="Earlier milestone">←</button><button class="btn" ${tlOn===TL.length-1?"disabled":""} id="tlN" aria-label="Later milestone">→</button></div>`;
+  $("tl").querySelectorAll("button").forEach(b=>b.onclick=()=>{tlOn=+b.dataset.i;renderTL();});
+  $("tlP").onclick=()=>{tlOn--;renderTL();}; $("tlN").onclick=()=>{tlOn++;renderTL();};
+}
+
+/* ---------- Figure 1 ---------- */
+function fig1(){
+  return `<svg class="fig1" viewBox="0 0 900 470" role="img" aria-label="NPP and FSS infrastructure and payment processing, based on the article's Figure 1">
+  <defs>
+    <marker id="mk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker>
+    <marker id="mkOn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/></marker>
+  </defs>
+  <g class="c" data-c="overlay"><rect class="b" x="358" y="14" width="184" height="34" rx="6" style="fill:var(--bank-soft);stroke:var(--bank)"/><text x="450" y="36" text-anchor="middle" font-weight="600">Overlay Service</text></g>
+  <g class="c" data-c="addr"><rect class="b" x="328" y="70" width="244" height="34" rx="6" style="fill:var(--bank-soft);stroke:var(--bank)"/><text x="450" y="92" text-anchor="middle" font-weight="600">NPP Addressing Service</text></g>
+  <g class="c" data-c="net"><rect class="b" x="240" y="120" width="420" height="212" rx="6" style="fill:var(--net-soft);stroke:var(--net)"/><rect x="240" y="120" width="420" height="28" rx="6" style="fill:var(--net)"/><text x="450" y="139" text-anchor="middle" font-weight="700" style="fill:#fff">NPP Network</text></g>
+  <g class="c" data-c="instA"><rect class="b" x="148" y="120" width="34" height="212" rx="4" style="fill:var(--surface);stroke:var(--bank)"/><text transform="translate(170,226) rotate(-90)" text-anchor="middle" font-size="12.5">Institution A</text></g>
+  <g class="c" data-c="gw"><rect class="b" x="182" y="120" width="36" height="212" rx="4" style="fill:var(--bank);stroke:var(--bank)"/><text transform="translate(205,226) rotate(-90)" text-anchor="middle" font-size="12.5" style="fill:#fff">Payment Gateway</text></g>
+  <g class="c" data-c="gw"><rect class="b" x="682" y="120" width="36" height="212" rx="4" style="fill:var(--bank);stroke:var(--bank)"/><text transform="translate(705,226) rotate(-90)" text-anchor="middle" font-size="12.5" style="fill:#fff">Payment Gateway</text></g>
+  <g class="c" data-c="instB"><rect class="b" x="718" y="120" width="34" height="212" rx="4" style="fill:var(--surface);stroke:var(--bank)"/><text transform="translate(740,226) rotate(-90)" text-anchor="middle" font-size="12.5">Institution B</text></g>
+  <g class="c" data-c="payer"><rect class="b" x="20" y="208" width="100" height="40" rx="6" style="fill:var(--payer);stroke:var(--payer)"/><text x="70" y="233" text-anchor="middle" font-weight="600" style="fill:#fff">Payer</text></g>
+  <g class="c" data-c="payee"><rect class="b" x="780" y="208" width="100" height="40" rx="6" style="fill:var(--payee);stroke:var(--payee)"/><text x="830" y="233" text-anchor="middle" font-weight="600" style="fill:#fff">Payee</text></g>
+  <g class="c" data-c="fss"><rect class="b" x="330" y="378" width="240" height="72" rx="6" style="fill:var(--fss-soft);stroke:var(--fss)"/><rect x="330" y="378" width="240" height="26" rx="6" style="fill:var(--bank)"/><text x="450" y="396" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:#fff">Payment Gateway</text><text x="450" y="432" text-anchor="middle" font-weight="700" font-size="16">FSS</text></g>
+  <g class="st dash" data-s="0"><path d="M166,120 V31 H354" data-ends="end"/><path d="M734,120 V31 H546" data-ends="end"/></g>
+  <g class="st" data-s="2"><path d="M199,120 V87 H324" data-ends="both"/><text x="206" y="80">2. Account lookup</text></g>
+  <g class="st" data-s="1"><path d="M122,228 H146" data-ends="end"/><text x="18" y="200">1. Initiate payment</text></g>
+  <g class="st" data-s="3"><path d="M220,176 H680" data-ends="both"/><text x="450" y="168" text-anchor="middle">3. Payment instruction &amp; confirmation</text></g>
+  <g class="st" data-s="4"><path d="M220,214 H448 V374" data-ends="end"/><text x="232" y="207">4. Settlement request</text></g>
+  <g class="st" data-s="5"><path d="M432,376 V262 H222" data-ends="end"/><path d="M466,376 V262 H678" data-ends="end"/><text x="232" y="282">5. Settlement confirmation</text><text x="668" y="282" text-anchor="end">5. Settlement confirmation</text></g>
+  <g class="st" data-s="6"><path d="M752,228 H776" data-ends="end"/><text x="882" y="200" text-anchor="end">6. Receive funds</text></g>
+  </svg>`;
+}
+function setMarkers(root){root.querySelectorAll(".st").forEach(g=>{const on=g.classList.contains("on");g.querySelectorAll("path").forEach(p=>{const m=`url(#${on?"mkOn":"mk"})`;p.setAttribute("marker-end",m);if(p.dataset.ends==="both")p.setAttribute("marker-start",m);});});}
+
+const COMP={
+  net:["NPP Network","A new domestic SWIFT network that provides fast connectivity and carries payment message flows between infrastructure components: clearing messages between participating ADIs, and settlement messages between those institutions and the FSS.","NPP Basic Infrastructure"],
+  gw:["Payment gateways (decentralised switching)","Payment gateways route messages across the network. They sit within participating ADIs' data centres, and each ADI is directly responsible for the speed and capacity of its own infrastructure. ADIs are also responsible for their own fraud monitoring.","NPP Basic Infrastructure"],
+  addr:["Addressing service","Lets customers, through their institution, link a transaction account to a simple unique identifier called a PayID, such as an email address, phone number or ABN. It confirms the payee's legal account name when a PayID is entered, reducing the risk of misdirected payments compared with BSB and account number.","NPP Basic Infrastructure"],
+  fss:["Fast Settlement Service (FSS)","A RITS service built and operated by the Reserve Bank. It gives fast, high-volume settlement of individual NPP settlement requests across ADIs' ESAs, 24/7. Its message format is ISO 20022. It tests each request against technical criteria and funds availability, then settles irrevocably and unconditionally in real time.","Reserve Bank"],
+  overlay:["Overlay services","Commercial payment services that use the Basic Infrastructure to send messages quickly, address payments by PayID and carry detailed data. They range from industry standards to new message flows or payment types, and can launch without all participants joining. The first was Osko by BPAY, available 24/7 through participating ADIs' digital banking, and usable by corporates and fintechs.","Built on the NPP"],
+  instA:["Payer's institution (ADI)","Receives the customer's instruction, looks up the PayID, checks its customer has the funds, sends the payment message, and initiates settlement automatically once clearing is complete.","Participant"],
+  instB:["Payee's institution (ADI)","Clears the payment by checking the details and confirming it can credit the payee, then makes funds available once it receives the FSS settlement confirmation.","Participant"],
+  payer:["Payer","A customer of a participating ADI who starts the payment through online banking or a mobile banking app.","Customer"],
+  payee:["Payee","A customer of another participating ADI, who has immediate access to the funds.","Customer"]
+};
+let infraOn="net";
+function renderInfra(){
+  const box=$("figInfra"); if(!box.firstChild) box.innerHTML=fig1();
+  box.querySelectorAll(".c").forEach(g=>{g.classList.toggle("on",g.dataset.c===infraOn);g.setAttribute("tabindex","0");g.setAttribute("role","button");g.onclick=()=>{infraOn=g.dataset.c;renderInfra();};g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();infraOn=g.dataset.c;renderInfra();}};});
+  setMarkers(box);
+  const c=COMP[infraOn];
+  $("infraBody").innerHTML=`<div class="kicker">${esc(c[2])}</div><h3 style="margin-bottom:8px">${esc(c[0])}</h3><p>${esc(c[1])}</p>
+    <div class="chips" style="margin-top:14px">${Object.entries(COMP).filter(([k])=>!["payer","payee"].includes(k)).map(([k,v])=>`<button class="chip" data-k="${k}" aria-pressed="${k===infraOn}">${esc(v[0].split(" (")[0])}</button>`).join("")}</div>`;
+  $("infraBody").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{infraOn=b.dataset.k;renderInfra();});
+}
+
+/* ---------- Play 4: process ---------- */
+const STEPS=[
+  {p:"clear",t:"Initiate payment",n:["payer","instA"],d:"A customer (the payer) initiates a payment through a banking channel such as an online banking portal or a mobile banking app."},
+  {p:"clear",t:"Account lookup",n:["instA","gw","addr"],d:"If the payer uses a PayID, the payer's institution sends an enquiry to the addressing service to find the BSB and account number linked to it. The legal account name is returned to the payer for confirmation, which helps reduce misdirected payments and fraud."},
+  {p:"clear",t:"Payment instruction and confirmation",n:["gw","net","instB"],d:"The payer's institution sends a message with all the payment details, subject to any overlay requirements, to the payee's institution through its payment gateway. The payee's institution clears the payment by checking the details and replies through its gateway, confirming it can credit the payee."},
+  {p:"settle",t:"Settlement request",n:["gw","fss"],d:"With clearing complete, the payer institution's gateway automatically sends a settlement request to the FSS. The FSS tests that the payer institution has sufficient funds, then moves value between the two institutions' ESAs in real time, debiting the payer institution and crediting the payee institution simultaneously."},
+  {p:"settle",t:"Settlement confirmation",n:["fss","gw"],d:"The FSS returns a settlement confirmation to both institutions to say settlement has occurred."},
+  {p:"post",t:"Receive funds",n:["instB","payee"],d:"Once it has the settlement confirmation, the payee ADI makes the funds available to its payee customer."}
+];
+let stepOn=0, procTimer=null;
+function renderProc(){
+  const box=$("figProc"); if(!box.firstChild) box.innerHTML=fig1();
+  const s=STEPS[stepOn];
+  box.querySelectorAll(".st").forEach(g=>{const k=+g.dataset.s;g.classList.toggle("on",k===stepOn+1);g.classList.toggle("done",k>0&&k<stepOn+1);});
+  box.querySelectorAll(".c").forEach(g=>{g.classList.toggle("on",s.n.includes(g.dataset.c));g.classList.toggle("dim",!s.n.includes(g.dataset.c)&&g.dataset.c!=="net");});
+  setMarkers(box);
+  const ph={clear:["Clearing",""],settle:["Settlement","settle"],post:["Funds available","post"]}[s.p];
+  $("procBody").innerHTML=`<div class="stepnum">Step ${stepOn+1} of ${STEPS.length} <span class="phase ${ph[1]}">${ph[0]}</span></div><h3 style="margin:8px 0">${esc(s.t)}</h3><p>${esc(s.d)}</p>
+    <div class="stepnav"><button class="btn" id="pP" ${stepOn===0?"disabled":""} aria-label="Previous step">←</button><button class="btn primary" id="pA">${procTimer?"❚❚ Pause":"▶ Play all"}</button><button class="btn" id="pN" ${stepOn===STEPS.length-1?"disabled":""} aria-label="Next step">→</button></div>
+    <div class="chips" style="margin-top:12px">${STEPS.map((x,i)=>`<button class="chip" data-i="${i}" aria-pressed="${i===stepOn}">${i+1}</button>`).join("")}</div>`;
+  $("pP").onclick=()=>{stopProc();stepOn--;renderProc();}; $("pN").onclick=()=>{stopProc();stepOn++;renderProc();};
+  $("pA").onclick=()=>{if(procTimer){stopProc();renderProc();}else{if(stepOn===STEPS.length-1)stepOn=0;procTimer=setInterval(()=>{if(stepOn>=STEPS.length-1){stopProc();renderProc();return;}stepOn++;renderProc();},3200);renderProc();}};
+  $("procBody").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{stopProc();stepOn=+b.dataset.i;renderProc();});
+}
+function stopProc(){if(procTimer){clearInterval(procTimer);procTimer=null;}}
+
+/* ---------- Play 5: settlement simulator ---------- */
+let SB={a:600000,b:400000,busy:false,log:[]};
+function renderSettleBal(){$("balA").textContent=AUD0.format(SB.a);$("balB").textContent=AUD0.format(SB.b);$("sAv").textContent=AUD0.format(+$("sA").value);
+  $("sLog").innerHTML=SB.log.length?SB.log.map(l=>`<div>${esc(l)}</div>`).join(""):"<div>Log is empty. Send a request.</div>";}
+$("sA").oninput=()=>{SB.a=+$("sA").value;renderSettleBal();};
+$("sReset").onclick=()=>{SB={a:600000,b:400000,busy:false,log:[]};$("sA").value=600000;$("sResult").innerHTML="";$("sFlow").querySelectorAll("div").forEach(d=>d.className="");renderSettleBal();};
+$("sGo").onclick=()=>{
+  if(SB.busy) return; const amt=Math.round(+$("sAmt").value||0);
+  if(amt<=0){$("sResult").innerHTML=`<div class="result bad">Enter a payment amount above $0.</div>`;return;}
+  SB.busy=true; $("sGo").disabled=true; const tech=$("sTech").checked;
+  const rows=[...$("sFlow").querySelectorAll("div")]; rows.forEach(d=>d.className=""); $("sResult").innerHTML="";
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches, gap=reduce?0:420;
+  const mark=(k,cls,ic)=>{const r=rows.find(x=>x.dataset.k===k);r.className="on "+cls;if(ic)r.querySelector(".ic").textContent=ic;};
+  rows.forEach((r,i)=>r.querySelector(".ic").textContent=i+1);
+  const t0=new Date().toLocaleTimeString("en-AU");
+  setTimeout(()=>{mark("recv","pass","✓");
+  setTimeout(()=>{ if(!tech){mark("tech","fail","✕");finish(false,"Rejected: the request failed technical validation.");return;} mark("tech","pass","✓");
+  setTimeout(()=>{ if(SB.a<amt){mark("funds","fail","✕");finish(false,`Rejected: insufficient funds. A's FSS Allocation is ${AUD0.format(SB.a)}, the payment is ${AUD0.format(amt)}.`);return;} mark("funds","pass","✓");
+  setTimeout(()=>{SB.a-=amt;SB.b+=amt;$("sA").value=Math.min(SB.a,2000000);finish(true,`Settled: A debited and B credited ${AUD0.format(amt)} at the same moment. Settlement confirmation sent to both institutions. Final and irrevocable.`);},gap);},gap);},gap);},gap/2);
+  function finish(ok,msg){ if(!ok){const r=rows.find(x=>x.dataset.k==="out");r.className="on fail";r.querySelector(".ic").textContent="✕";} else {const r=rows.find(x=>x.dataset.k==="out");r.className="on pass";r.querySelector(".ic").textContent="✓";}
+    $("sResult").innerHTML=`<div class="result ${ok?"ok":"bad"}">${esc(msg)}${ok?"":" A rejection message is returned to the institutions. The payment cannot be recalled or queued: the sender must try again once it has funds."}</div>`;
+    SB.log.unshift(`${t0}  ${AUD0.format(amt)}  ${ok?"SETTLED":"REJECTED"}  A=${AUD0.format(SB.a)}  B=${AUD0.format(SB.b)}`);
+    SB.busy=false;$("sGo").disabled=false;renderSettleBal();}
+};
+
+/* ---------- Play 6: liquidity simulator ---------- */
+let L;
+function lStart(){L={fss:2.5,rits:6.5,open:true,log:[]};lLog("Start of business day: ESA $9.0m, FSS Allocation at the reset point, rest in the RITS Allocation.");lSync();lRender();}
+const m=v=>"$"+v.toFixed(1)+"m";
+function lLog(t){L.log.unshift(t);}
+function lCfg(){return {up:+$("lUp").value,rs:+$("lRs").value,lo:+$("lLo").value};}
+function lSync(){ // enforce lo < rs < up
+  let {up,rs,lo}=lCfg(); if(rs>=up){rs=Math.max(0.5,up-0.1);$("lRs").value=rs;} if(lo>=rs){lo=Math.max(0,rs-0.1);$("lLo").value=lo;}
+  $("lUpv").textContent=m(+$("lUp").value);$("lRsv").textContent=m(+$("lRs").value);$("lLov").textContent=m(+$("lLo").value);}
+function lTriggers(){
+  if(!L.open) return; const c=lCfg();
+  if(L.fss<=c.lo){const need=c.rs-L.fss, amt=Math.min(need,L.rits); if(amt>0){L.fss+=amt;L.rits-=amt;lLog(`Lower trigger (${m(c.lo)}) reached: FSS top-up ${m(amt)} from the RITS Allocation, back to ${m(L.fss)}.`);} else lLog("Lower trigger reached but the RITS Allocation is empty. Consider an intraday repo.");}
+  else if(L.fss>=c.up){const amt=L.fss-c.rs; L.fss-=amt;L.rits+=amt;lLog(`Upper trigger (${m(c.up)}) reached: FSS withdrawal ${m(amt)} to the RITS Allocation, back to ${m(L.fss)}.`);}
+}
+function lNpp(d){
+  if(d<0&&L.fss+d<-1e-9){lLog(`NPP payments of ${m(-d)} rejected by the FSS: insufficient funds in the FSS Allocation.`);lRender();return;}
+  L.fss+=d; lLog(`${d<0?"Outgoing":"Incoming"} NPP payments settled: ${d<0?"−":"+"}${m(Math.abs(d))}. FSS Allocation ${m(L.fss)}.`); lTriggers(); lRender();
+}
+function lRits(d){
+  if(!L.open){lLog("RITS is closed: RITS payments can't settle now. Only the FSS operates overnight and on weekends.");lRender();return;}
+  if(L.rits+d<-1e-9){lLog(`RITS payment of ${m(-d)} can't settle from the RITS Allocation (${m(L.rits)}). It would wait in the RITS System Queue.`);lRender();return;}
+  L.rits+=d; lLog(`RITS payment settled: −${m(-d)}. RITS Allocation ${m(L.rits)}.`); lRender();
+}
+function lSetOpen(o){
+  if(o===L.open) return; L.open=o;
+  if(!o){const amt=L.rits;L.fss+=amt;L.rits=0;lLog(`RITS closes: all ESA funds (${m(amt)} more) move to the FSS Allocation, now ${m(L.fss)}.`);}
+  else {const c=lCfg(); if(L.fss>c.rs){const amt=L.fss-c.rs;L.fss-=amt;L.rits+=amt;lLog(`RITS opens: FSS Allocation reset to ${m(c.rs)}; ${m(amt)} moves to the RITS Allocation.`);} else lLog("RITS opens. FSS Allocation is at or below the reset point.");}
+  $("lOpen").setAttribute("aria-pressed",o);$("lClosed").setAttribute("aria-pressed",!o); lRender();
+}
+function lManual(){
+  if(!L.open){lLog("Manual reset isn't needed while RITS is closed: all funds already sit in the FSS Allocation.");lRender();return;}
+  const c=lCfg(), d=c.rs-L.fss;
+  if(Math.abs(d)<1e-9){lLog("FSS Allocation is already at the reset point.");}
+  else if(d>0){const amt=Math.min(d,L.rits);L.fss+=amt;L.rits-=amt;lLog(`Manual reset: ${m(amt)} moved into the FSS Allocation.`);}
+  else {L.fss+=d;L.rits-=d;lLog(`Manual reset: ${m(-d)} moved to the RITS Allocation.`);}
+  lRender();
+}
+function lRender(){
+  const c=lCfg(), total=L.fss+L.rits, scale=Math.max(9,total+1), H=230, y0=30, sc=v=>y0+H-(v/scale)*H;
+  const svg=$("esaSvg"); let s="";
+  s+=`<text x="80" y="18" text-anchor="middle" font-weight="600" font-size="13">FSS Allocation</text><text x="360" y="18" text-anchor="middle" font-weight="600" font-size="13">RITS Allocation</text>`;
+  s+=`<rect x="20" y="${y0}" width="120" height="${H}" rx="6" style="fill:var(--band);stroke:var(--line)"/><rect x="300" y="${y0}" width="120" height="${H}" rx="6" style="fill:var(--band);stroke:var(--line)"/>`;
+  s+=`<rect x="20" y="${sc(L.fss)}" width="120" height="${y0+H-sc(L.fss)}" rx="6" style="fill:var(--fss);opacity:.85"/>`;
+  s+=`<rect x="300" y="${sc(L.rits)}" width="120" height="${y0+H-sc(L.rits)}" rx="6" style="fill:var(--bank);opacity:${L.open?.85:.3}"/>`;
+  [["Upper trigger",c.up,"--muted","6 4"],["Reset point",c.rs,"--neg","4 3"],["Lower trigger",c.lo,"--muted","6 4"]].forEach(([n,v,col,da])=>{const y=sc(v);
+    s+=`<line x1="14" x2="146" y1="${y}" y2="${y}" style="stroke:var(${col});stroke-width:2;stroke-dasharray:${da}"/><text x="150" y="${y+4}" class="lbl" style="fill:var(${col})">${n} ${m(v)}</text>`;});
+  s+=`<text x="80" y="${y0+H+22}" text-anchor="middle" font-size="16" font-weight="700">${m(L.fss)}</text><text x="360" y="${y0+H+22}" text-anchor="middle" font-size="16" font-weight="700">${m(L.rits)}</text>`;
+  s+=`<text x="360" y="${y0+H/2}" text-anchor="middle" class="lbl">${L.open?"":"RITS closed"}</text>`;
+  svg.innerHTML=s;
+  $("lLog").innerHTML=L.log.slice(0,30).map(t=>`<div>${esc(t)}</div>`).join("");
+}
+document.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>lNpp(+b.dataset.l));
+document.querySelectorAll("[data-r]").forEach(b=>{if(b.closest(".btnrow"))b.onclick=()=>lRits(+b.dataset.r);});
+$("lOpen").onclick=()=>lSetOpen(true); $("lClosed").onclick=()=>lSetOpen(false);
+$("lReset").onclick=lManual; $("lRestart").onclick=()=>{$("lOpen").setAttribute("aria-pressed",true);$("lClosed").setAttribute("aria-pressed",false);lStart();};
+["lUp","lRs","lLo"].forEach(id=>$(id).oninput=()=>{lSync();lRender();});
+
+/* ---------- Play 7: access chooser ---------- */
+let AC=store.get("access",{adi:"yes",direct:"no",gw:"other"});
+function renderAccess(){
+  const q=(k,l,o)=>`<div style="margin-top:14px"><div class="kicker">${l}</div><div class="chips">${o.map(([v,t])=>`<button class="chip" data-k="${k}" data-v="${v}" aria-pressed="${AC[k]===v}">${esc(t)}</button>`).join("")}</div></div>`;
+  let h=`<h3>About your organisation</h3>`+q("adi","Are you an authorised deposit-taking institution (ADI)?",[["yes","Yes, an ADI"],["no","No (fintech, corporate, other)"]]);
+  if(AC.adi==="yes"){h+=q("direct","Do you want to clear and/or settle NPP payments yourself?",[["yes","Yes, directly"],["no","No, someone else can do it for us"]]);
+    if(AC.direct==="yes")h+=q("gw","How will you connect to the Basic Infrastructure?",[["own","Our own payment gateway"],["other","Another participant's gateway"],["third","A third-party gateway provider"]]);}
+  else h+=q("direct","Do you only need to send non-value messages, such as payment initiation?",[["yes","Yes"],["no","No, we need full payment services"]]);
+  $("accForm").innerHTML=h;
+  $("accForm").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{AC[b.dataset.k]=b.dataset.v;store.set("access",AC);renderAccess();});
+  let t,d;
+  if(AC.adi==="yes"&&AC.direct==="yes"){t="NPP participant";d={own:"You clear and/or settle directly and install your own payment gateway in your data centre, taking responsibility for its speed, capacity and your fraud monitoring.",other:"You clear and/or settle directly, connecting through another NPP participant's payment gateway.",third:"You clear and/or settle directly, connecting through a third-party payment gateway provider."}[AC.gw];}
+  else if(AC.adi==="yes"){t="Identified institution";d="Form an agency arrangement with a sponsor participant, which clears and/or settles NPP payments on your behalf. More than 55 banks, credit unions and building societies already offered fast payments this way. Transactions between identified institutions with the same sponsor don't go through the FSS.";}
+  else if(AC.direct==="yes"){t="Connected Institution (future model)";d="The article describes a future class of non-ADIs meeting the required criteria that could get their own payment gateway and submit non-value messages, such as payment initiation messages, for NPP participants to process.";}
+  else {t="Access through a participant";d="NPP participants, and ADIs specialising in institutional banking, can give third parties such as fintechs and corporates access to the NPP. Overlay services like Osko can also be used by corporates and fintechs.";}
+  $("accOut").innerHTML=`<div class="kicker">Best fit</div><h3>${esc(t)}</h3><p style="margin-top:8px">${esc(d)}</p>`;
+}
+
+/* ---------- Play 8: resilience ---------- */
+const RES={
+  normal:{t:"Normal 24/7 operation",s:[["ok","NPP clearing","Payment gateways exchange messages in real time"],["ok","FSS settlement","Each request settled or rejected, median ~50 ms"],["ok","Support","RITS Help Desk now 24/7; FSS monitored continuously"]],d:["The Reserve Bank targets 99.995% FSS availability.","Continuous monitoring lets problems be identified and managed promptly.","24/7 shift work and building upgrades support continuous operations."]},
+  maint:{t:"Planned maintenance or upgrade",s:[["ok","NPP clearing","Unaffected"],["ok","FSS settlement","Keeps running while components are upgraded"],["ok","Support","Change managed by the Bank"]],d:["The FSS is built from isolated components that can be upgraded independently.","Planned maintenance and upgrades are carried out while the system stays in operation."]},
+  site:{t:"Loss of one operating site",s:[["ok","NPP clearing","Unaffected"],["warn","FSS settlement","Operates from the other site"],["ok","Support","RITS Help Desk 24/7"]],d:["The FSS can be operated from two geographically remote sites.","Dual sites are required to meet very high levels of availability."]},
+  extreme:{t:"Extreme disruption to the FSS",s:[["ok","NPP clearing","Continues for up to 12 hours without settlement"],["bad","FSS settlement","Unavailable; settlement requests stored"],["warn","Recovery","Stored requests are settled when the FSS is available again"]],d:["The NPP has contingency arrangements: the Basic Infrastructure can keep clearing payments for up to 12 hours without settlement.","It stores settlement requests until the FSS is available again."]}
+};
+let resOn="normal";
+function renderRes(){
+  $("resTabs").innerHTML=Object.entries(RES).map(([k,v])=>`<button class="chip" data-k="${k}" aria-pressed="${k===resOn}">${esc(v.t)}</button>`).join("");
+  $("resTabs").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{resOn=b.dataset.k;renderRes();});
+  const r=RES[resOn];
+  $("resBody").innerHTML=`<h3>${esc(r.t)}</h3><div class="status">${r.s.map(([c,n,t])=>`<div><b><i class="${c}"></i>${esc(n)}</b><span>${esc(t)}</span></div>`).join("")}</div><div class="kicker" style="margin-top:14px">Design features that apply</div><ul class="clean">${r.d.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+}
+
+/* ---------- Play 9: charts (values approximate, read from the article's graphs) ---------- */
+const W1v=[0.05,0.1,0.16,0.19,0.23,0.3,0.22,0.24,0.33,0.43,0.41,0.49,0.45,0.51,0.47,0.53,0.49,0.51,0.54,0.67,0.56,0.56,0.46,0.63,0.81,0.95,1.15,1.35,1.55];
+const W1n=[0.09,0.18,0.26,0.32,0.39,0.48,0.38,0.43,0.49,0.56,0.55,0.62,0.61,0.66,0.62,0.67,0.65,0.72,0.75,0.82,0.79,0.83,0.82,0.92,1.03,1.07,1.16,1.32,1.41];
+const W1d=W1v.map((_,i)=>{const d=new Date(Date.UTC(2018,1,16+7*i));return d.toLocaleDateString("en-AU",{day:"numeric",month:"short",timeZone:"UTC"});});
+const G2v=[260,240,170,120,70,90,800,480,700,950,1300,1370,1360,1330,1340,1330,1350,1100,900,850,830,750,600,400];
+const G2n=[360,250,180,130,90,100,270,700,1000,1250,1480,1530,1560,1520,1480,1440,1530,1520,1500,1470,1530,1300,1000,650];
+const G2d=G2v.map((_,i)=>String(i).padStart(2,"0")+":00");
+const G3d=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], G3v=[83,86,99,103,93,32,29], G3n=[94,104,126,129,107,61,58];
+const CH={g1:"v",g2:"v",g3:"v"};
+function niceMax(v){const p=Math.pow(10,Math.floor(Math.log10(v)));for(const k of [1,1.2,1.5,2,2.5,3,4,5,6,8,10])if(k*p>=v)return k*p;return 10*p;}
+function chart(el,labels,data,opt){
+  const W=opt.w||900,H=opt.h||300,L=52,R=30,T=14,B=30,iw=W-L-R,ih=H-T-B,max=niceMax(Math.max(...data)*1.05),n=data.length;
+  const x=i=>opt.bar?L+(i+.5)*iw/n:L+i*iw/(n-1), y=v=>T+ih-v/max*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opt.aria)}"><g class="grid">`;
+  for(let k=0;k<=4;k++){const v=max*k/4;s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${opt.fmt(v)}</text>`;}
+  s+=`</g>`;
+  const every=Math.ceil(n/(opt.ticks||8));
+  labels.forEach((l,i)=>{if(i%every===0||opt.bar)s+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle">${esc(l)}</text>`;});
+  if(opt.bar){const bw=iw/n*.62;data.forEach((v,i)=>{s+=`<rect x="${x(i)-bw/2}" y="${y(v)}" width="${bw}" height="${T+ih-y(v)}" rx="3" style="fill:var(${opt.hi&&opt.hi(i)?"--warn":"--accent"})"/>`;});}
+  else{const pts=data.map((v,i)=>`${x(i)},${y(v)}`).join(" ");s+=`<polygon points="${L},${T+ih} ${pts} ${x(n-1)},${T+ih}" style="fill:var(--accent);opacity:.12"/><polyline points="${pts}" style="fill:none;stroke:var(--accent);stroke-width:2.4;stroke-linejoin:round"/><circle cx="${x(n-1)}" cy="${y(data[n-1])}" r="4" style="fill:var(--accent)"/>`;}
+  s+=`<line class="cur" x1="0" x2="0" y1="${T}" y2="${T+ih}" style="stroke:var(--muted);stroke-dasharray:3 3;visibility:hidden"/><rect class="hit" x="${L}" y="${T}" width="${iw}" height="${ih}" style="fill:transparent"/></svg><div class="tip" hidden></div>`;
+  el.innerHTML=s;
+  const svg=el.querySelector("svg"),tip=el.querySelector(".tip"),cur=el.querySelector(".cur");
+  const move=e=>{const r=svg.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*W;let i=opt.bar?Math.floor((px-L)/(iw/n)):Math.round((px-L)/(iw/(n-1)));i=Math.max(0,Math.min(n-1,i));
+    cur.setAttribute("x1",x(i));cur.setAttribute("x2",x(i));cur.style.visibility="visible";tip.hidden=false;tip.textContent=`${labels[i]}: ${opt.tip(data[i])}`;tip.style.left=(x(i)/W*100)+"%";tip.style.top=(y(data[i])/H*r.height)+"px";};
+  svg.addEventListener("pointermove",move);svg.addEventListener("pointerleave",()=>{tip.hidden=true;cur.style.visibility="hidden";});
+}
+function tabs(id,key){$(id).innerHTML=[["v","Value"],["n","Volume"]].map(([k,l])=>`<button class="chip" data-k="${k}" aria-pressed="${CH[key]===k}">${l}</button>`).join("");$(id).querySelectorAll(".chip").forEach(b=>b.onclick=()=>{CH[key]=b.dataset.k;drawCharts();});}
+function drawCharts(){
+  tabs("g1Tabs","g1");tabs("g2Tabs","g2");tabs("g3Tabs","g3");
+  chart($("g1"),W1d,CH.g1==="v"?W1v:W1n,{aria:"Weekly FSS settlement activity, February to August 2018",ticks:9,fmt:v=>CH.g1==="v"?"$"+v.toFixed(1)+"b":v.toFixed(1)+"m",tip:v=>CH.g1==="v"?`≈ $${v.toFixed(2)}b settled (week ending)`:`≈ ${v.toFixed(2)}m transactions (week ending)`});
+  chart($("g2"),G2d,CH.g2==="v"?G2v:G2n,{w:480,h:250,aria:"Intraday FSS settlement activity",ticks:8,fmt:v=>CH.g2==="v"?"$"+Math.round(v)+"k":String(Math.round(v)),tip:v=>CH.g2==="v"?`≈ $${Math.round(v)}k average value`:`≈ ${Math.round(v)} average transactions`});
+  chart($("g3"),G3d,CH.g3==="v"?G3v:G3n,{w:480,h:250,bar:true,hi:i=>i>=5,aria:"FSS settlement activity by day of week",fmt:v=>CH.g3==="v"?"$"+Math.round(v)+"m":Math.round(v)+"k",tip:v=>CH.g3==="v"?`≈ $${v}m average value`:`≈ ${v}k average transactions`});
+}
+
+/* ---------- Quiz ---------- */
+const QUIZ=[
+  {q:"When was the NPP launched to the public?",o:["27 November 2017","13 February 2018","1 July 2018","20 September 2018"],a:1,w:"It went live between participants on 27 November 2017 for live proving, and launched to the public on 13 February 2018."},
+  {q:"What was the FSS's median settlement-processing time after launch?",o:["About 5 seconds","About 1 second","About 50 milliseconds","About 5 milliseconds"],a:2,w:"Using in-memory processing borrowed from some stock exchanges, the median is around 50 milliseconds."},
+  {q:"Who operates the NPP Basic Infrastructure?",o:["The Reserve Bank","SWIFT, under contract with NPPA","BPAY","Each ADI independently"],a:1,w:"NPPA owns and operates the utility; SWIFT operates it under contract with NPPA."},
+  {q:"Where are the NPP payment gateways located?",o:["At the Reserve Bank","In a single central switch","Within participating ADIs' data centres","In the cloud with SWIFT"],a:2,w:"Switching is decentralised: gateways sit in each ADI's data centre, and each ADI owns their speed and capacity."},
+  {q:"Which funds are used to settle NPP payments?",o:["The whole ESA","The FSS Allocation only","The RITS Allocation","The cash market"],a:1,w:"Institutions split their ESA into an FSS Allocation and a RITS Allocation; NPP payments settle from the FSS Allocation only."},
+  {q:"What happens if a settlement request fails the FSS's tests?",o:["It waits in the RITS System Queue","It settles and is reversed later","It's rejected, and a rejection message goes to the institutions","The Reserve Bank lends the funds automatically"],a:2,w:"The payment is rejected and settlement doesn't happen. NPP payments also can't be recalled."},
+  {q:"What happens to ESA funds when RITS is not operating?",o:["They are frozen","They move to the RITS Allocation","All ESA funds move to the FSS Allocation","They are lent in the cash market"],a:2,w:"RITS settles 7.30 am–10 pm on business days; outside those hours all ESA funds move to the FSS Allocation."},
+  {q:"What does the new RITS liquidity tool use to move funds between allocations?",o:["Upper and lower trigger points with a reset point","Fixed hourly transfers","Manual phone requests only","Overnight interest rates"],a:0,w:"When a trigger point is reached, funds are reallocated automatically back to the institution's reset point."},
+  {q:"What availability does the Reserve Bank target for the FSS?",o:["99.5%","99.9%","99.99%","99.995%"],a:3,w:"The target is 99.995 per cent."},
+  {q:"In an extreme FSS disruption, how long can the NPP keep clearing without settlement?",o:["15 minutes","1 hour","Up to 12 hours","Up to 3 days"],a:2,w:"The Basic Infrastructure can clear for up to 12 hours, storing settlement requests until the FSS is available."},
+  {q:"What was the first NPP overlay service?",o:["PayTo","Osko by BPAY","Beem","PayID"],a:1,w:"Osko by BPAY. PayID is a function of the addressing service, not an overlay."},
+  {q:"How many interbank transactions had the FSS settled by end August 2018?",o:["1.9 million, worth $1.5 billion","19.4 million, worth $15.1 billion","50 million, worth $50 billion","65 million, worth $19.4 billion"],a:1,w:"19.4 million interbank transactions worth $15.1 billion. 1.9 million is the number of PayID registrations."}
+];
+let QA=store.get("quiz",{});
+function renderQuiz(){
+  let sc=0,an=0;
+  $("qzList").innerHTML=QUIZ.map((q,i)=>{const a=QA[i];if(a!=null){an++;if(a===q.a)sc++;}
+    return `<div class="card qz"><div class="kicker">Question ${i+1} of ${QUIZ.length}</div><h3>${esc(q.q)}</h3><div class="opts">${q.o.map((o,j)=>`<button data-q="${i}" data-o="${j}" class="${a==null?"":j===q.a?"right":j===a?"wrong":""}" ${a!=null?"disabled":""}>${esc(o)}</button>`).join("")}</div>${a!=null?`<p class="why"><b>${a===q.a?"Correct.":"Not quite."}</b> ${esc(q.w)}</p>`:""}</div>`;}).join("");
+  $("qzScore").textContent=`${sc}/${QUIZ.length}`;
+  $("qzMsg").textContent=an<QUIZ.length?`${an} of ${QUIZ.length} answered. Your answers are saved in this browser.`:sc>=10?"Excellent. You know the NPP and FSS well.":sc>=7?"Good. Revisit the plays for the ones you missed.":"Worth another pass through the plays, then try again.";
+  $("qzList").querySelectorAll("button[data-q]").forEach(b=>b.onclick=()=>{QA[b.dataset.q]=+b.dataset.o;store.set("quiz",QA);renderQuiz();});
+}
+$("qzReset").onclick=()=>{QA={};store.set("quiz",QA);renderQuiz();};
+
+/* ---------- Glossary ---------- */
+const GL={
+  "ADI":"Authorised deposit-taking institution, such as a bank, credit union or building society.",
+  "Addressing service":"NPP component that links a transaction account to a PayID and returns the payee's legal account name.",
+  "APCA":"Australian Payments Clearing Association, now the Australian Payments Network. Hosted the Real-Time Payments Committee.",
+  "BSB":"Bank-State-Branch number that, with an account number, identifies an account.",
+  "Cash market":"The market where banks borrow and lend ESA funds, generally overnight (one business day) and unsecured.",
+  "Connected Institution":"A future class of non-ADI organisation that could have its own payment gateway and submit non-value messages, such as payment initiation.",
+  "Core Criteria":"The framework the PSB endorsed in 2012 for assessing industry proposals for fast payments.",
+  "Direct entry (DE)":"Batch system for direct debits and internet 'pay anyone' transfers, settled on a deferred basis.",
+  "ESA":"Exchange Settlement Account held at the Reserve Bank, used to settle obligations between institutions.",
+  "FSS":"Fast Settlement Service: the RITS service that settles individual NPP payments across ESAs in real time, 24/7.",
+  "FSS Allocation":"The part of an institution's ESA reserved for settling NPP payments.",
+  "RITS Allocation":"The part of an institution's ESA used for other RITS settlement.",
+  "Identified institution":"An ADI that uses the NPP through an agency arrangement with a sponsor participant.",
+  "Intraday repo":"Repurchase agreement with the Reserve Bank that carries no interest but must be reversed the same day.",
+  "ISO 20022":"Flexible, extensible global standard for financial messages, used by the NPP and the FSS.",
+  "Live proving":"The period from 27 November 2017 when a small number of real transactions verified systems in production.",
+  "NPP":"New Payments Platform: infrastructure for fast, data-rich, 24/7 retail payments, launched 13 February 2018.",
+  "NPP Basic Infrastructure":"The industry utility owned by NPPA and operated by SWIFT: network, payment gateways and addressing service.",
+  "NPPA":"NPP Australia Limited, founded with 13 members (12 ADIs and the Reserve Bank) to develop and run the NPP.",
+  "NPP participant":"An ADI that directly clears and/or settles NPP payments.",
+  "Open repo":"Repurchase agreement with no fixed maturity, for institutions that regularly need intraday repos or settle DE or FSS payments when the cash market is closed.",
+  "Osko":"Osko by BPAY, the first NPP overlay service: fast payments with data, 24/7, through digital banking.",
+  "Overlay service":"Commercial payment service built on the NPP Basic Infrastructure that can launch without every participant joining.",
+  "Payment gateway":"Component in each ADI's data centre that routes NPP messages across the network (decentralised switching).",
+  "PayID":"Simple identifier, such as an email address, phone number or ABN, linked to an account.",
+  "PSB":"The Reserve Bank's Payments System Board.",
+  "Reset point":"The FSS Allocation level that funds are reallocated back to when a trigger point is reached.",
+  "RITS":"Reserve Bank Information and Transfer System, Australia's RTGS system.",
+  "RITS System Queue":"Where non-NPP RITS payments are tested and settled; the FSS settles NPP payments independently of it.",
+  "RTGS":"Real-time gross settlement: payments across central bank accounts on a continuous gross basis.",
+  "Settlement confirmation":"Message the FSS sends to both institutions once settlement has occurred.",
+  "Settlement request":"Message the payer institution's gateway sends to the FSS once clearing is complete.",
+  "Sponsor participant":"An NPP participant that clears and/or settles for identified institutions.",
+  "Standing Facilities":"Reserve Bank facilities that provide extra ESA funds to eligible institutions on pre-specified terms.",
+  "Trigger points":"Upper and lower FSS Allocation levels that automatically move funds to or from the RITS Allocation."
+};
+function renderGl(){const q=($("gq").value||"").toLowerCase();$("glList").innerHTML=Object.keys(GL).sort((a,b)=>a.localeCompare(b)).filter(k=>!q||(k+" "+GL[k]).toLowerCase().includes(q)).map(k=>`<div><dt>${esc(k)}</dt><dd>${esc(GL[k])}</dd></div>`).join("")||`<p class="note">No matching terms.</p>`;}
+$("gq").oninput=renderGl;
+
+/* ---------- Boot ---------- */
+buildIndex(); progress(); foots(); renderStart(); renderObjs(); renderTL(); renderInfra(); renderProc(); renderSettleBal(); lSync(); lStart(); renderAccess(); renderRes(); renderQuiz(); renderGl();
+route();
+</script>
+</body>
+</html>
